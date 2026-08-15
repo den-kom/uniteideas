@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Submit an idea — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Submit an idea</h1>
+<p class="lede">
+  Publish a short one-pager so people can find and back it. Keep the detailed
+  write-up sealed if you want to stay patentable or simply cautious.
+</p>
+
+<form method="post" action="/submit" enctype="multipart/form-data" class="stack form">
+  <label>Title
+    <input type="text" name="title" required maxlength="200" placeholder="Pet guard for office chair wheels" />
+  </label>
+
+  <label>One-line summary (public)
+    <input type="text" name="summary" required maxlength="300"
+           placeholder="A clip-on guard that stops pets' tails getting caught in chair castors." />
+  </label>
+
+  <div class="two-up">
+    <label>Type
+      <select name="idea_type">
+        <option value="digital">Digital (app, tool, site)</option>
+        <option value="physical">Physical product</option>
+      </select>
+    </label>
+    <label>Category
+      <input type="text" name="category" list="cats" placeholder="pets" />
+      <datalist id="cats">
+        {% for c in categories %}<option value="{{ c }}"></option>{% endfor %}
+      </datalist>
+    </label>
+  </div>
+
+  <label>Public one-pager
+    <textarea name="public_body" rows="8"
+              placeholder="The problem, who it helps, and roughly how it works. This is public."></textarea>
+  </label>
+
+  <label>Sealed detail (kept private)
+    <textarea name="sealed_detail" rows="8"
+              placeholder="Dimensions, materials, algorithms, go-to-market — anything you are not ready to publish."></textarea>
+  </label>
+  <p class="fine">
+    Sealed text is encrypted at rest. Only its fingerprint is published, which is
+    enough to prove later that this exact text existed today.
+  </p>
+
+  <label>Attachment (optional — PDF, PNG or JPEG, max 10MB)
+    <input type="file" name="attachment" accept="application/pdf,image/png,image/jpeg" />
+  </label>
+
+  <button class="btn">Submit and timestamp</button>
+</form>
+
+<p class="fine">
+  Your timestamp is recorded the moment you submit. If this is your first idea, it is
+  held for a short moderator review before it appears publicly — later ideas go live
+  immediately.
+</p>
+
+{% endblock %}

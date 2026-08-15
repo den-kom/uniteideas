@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Verify a proof — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Verify a proof</h1>
+<p class="lede">
+  Upload a proof bundle to check that its content matches its fingerprint and that the
+  fingerprint is on record here. You do not need an account.
+</p>
+
+<form method="post" action="/verify" enctype="multipart/form-data" class="stack form narrow">
+  <label>Proof bundle (.json)
+    <input type="file" name="bundle" accept="application/json,.json" />
+  </label>
+  <p class="fine">or</p>
+  <label>Content fingerprint (SHA-256)
+    <input type="text" name="content_hash" placeholder="64 hex characters" />
+  </label>
+  <button class="btn">Verify</button>
+</form>
+
+{% if result %}
+<section class="card {{ 'ok-card' if result.ok else 'bad-card' }}">
+  <h2>{{ 'Verified' if result.ok else 'Could not verify' }}</h2>
+  <ul class="checks">
+    {% for label, ok, detail in result.checks %}
+    <li class="{{ 'pass' if ok else 'fail' }}">
+      <strong>{{ 'PASS' if ok else 'FAIL' }}</strong> — {{ label }}
+      <span class="fine">{{ detail }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if result.receipt %}
+  <dl>
+    <dt>Idea</dt><dd><a href="/ideas/{{ result.receipt.idea_id }}">{{ result.receipt.idea_id }}</a></dd>
+    <dt>Author</dt><dd>{{ result.receipt.author_display }}</dd>
+    <dt>Claimed submission time</dt><dd>{{ result.receipt.submitted_at_utc }}</dd>
+  </dl>
+  {% endif %}
+</section>
+{% endif %}
+
+{% endblock %}

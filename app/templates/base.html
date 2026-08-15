@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}UniteIdeas{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">Unite<span>Ideas</span></a>
+  <nav class="nav">
+    <a href="/ideas">Browse</a>
+    <a href="/verify">Verify a proof</a>
+    {% if user %}
+      <a href="/submit" class="cta">Submit an idea</a>
+      <a href="/profile">{{ user.display_name }}</a>
+      {% if user.is_staff %}<a href="/moderation">Moderation</a>{% endif %}
+      {% if user.is_admin %}<a href="/admin/users">Users</a>{% endif %}
+      <form method="post" action="/logout" class="inline"><button class="link">Sign out</button></form>
+    {% else %}
+      <a href="/login" class="cta">Sign in</a>
+    {% endif %}
+  </nav>
+</header>
+
+{% if user and not user.onboarding_done %}
+<div class="banner">
+  New here? <a href="/onboarding">Take the 60-second tour</a> to see how UniteIdeas protects your idea.
+</div>
+{% endif %}
+
+<main>
+  {% if msg %}<p class="flash ok">{{ msg }}</p>{% endif %}
+  {% if err %}<p class="flash bad">{{ err }}</p>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p>
+    UniteIdeas is a place to share ideas safely, prove when you shared them, and build them with others.
+  </p>
+  <p class="fine">
+    Proof receipts are evidence that content existed at a given time. They are not patents and not legal advice.
+  </p>
+</footer>
+</body>
+</html>

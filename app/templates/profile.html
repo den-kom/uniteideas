@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ user.display_name }} — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>{{ user.display_name }}</h1>
+<p class="meta">Role: {{ user.role }} &middot; joined {{ user.created_at.strftime('%d %b %Y') }}</p>
+<p class="meta">
+  Time pledged across projects: {{ pledged_total }}h/week
+  (cap {{ settings.max_pledge_hours_per_week }}h/week)
+</p>
+
+<section>
+  <h2>My ideas</h2>
+  {% if my_ideas %}
+  <ul class="plain">
+    {% for idea in my_ideas %}
+    <li>
+      <a href="/ideas/{{ idea.id }}">{{ idea.title }}</a>
+      <span class="fine">{{ idea.score }} backers &middot; {{ idea.stage|replace('_', ' ') }}
+        {% if idea.status != 'published' %}&middot; {{ idea.status }}{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="hint">None yet. <a href="/submit">Submit your first idea</a>.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Projects I contribute to</h2>
+  {% if my_memberships %}
+  <ul class="plain">
+    {% for m in my_memberships %}
+    <li>
+      <a href="/ideas/{{ m.idea_id }}">{{ member_ideas[m.idea_id].title if member_ideas[m.idea_id] else m.idea_id }}</a>
+      <span class="fine">{{ m.role_in_team }} &middot; {{ m.pledged_hours_per_week }}h/week</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="hint">None yet. <a href="/ideas">Find an idea to help with</a>.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>My join requests</h2>
+  {% if my_joins %}
+  <ul class="plain">
+    {% for j in my_joins %}
+    <li>
+      <a href="/ideas/{{ j.idea_id }}">{{ join_ideas[j.idea_id].title if join_ideas[j.idea_id] else j.idea_id }}</a>
+      <span class="fine">{{ j.status }} &middot; {{ j.pledged_hours_per_week }}h/week</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="hint">No requests sent.</p>
+  {% endif %}
+</section>
+
+<p><a href="/onboarding">Replay the tour</a></p>
+
+{% endblock %}

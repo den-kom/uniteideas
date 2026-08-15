@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Users — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Users</h1>
+<p class="fine">The first account created on a fresh database becomes admin automatically.</p>
+
+<table class="table">
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.display_name }}</td>
+    <td class="fine">{{ u.email }}</td>
+    <td>{{ u.role }}</td>
+    <td class="fine">{{ u.created_at.strftime('%d %b %Y') }}</td>
+    <td>
+      <form method="post" action="/admin/users/{{ u.id }}/role" class="inline">
+        <select name="role">
+          {% for r in roles %}<option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+        </select>
+        <button class="btn small ghost">Set</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

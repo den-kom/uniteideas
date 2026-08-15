@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Browse ideas — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Ideas</h1>
+
+<form class="filters" method="get" action="/ideas">
+  <label>Type
+    <select name="type">
+      <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All</option>
+      <option value="digital" {% if filter_type == 'digital' %}selected{% endif %}>Digital</option>
+      <option value="physical" {% if filter_type == 'physical' %}selected{% endif %}>Physical</option>
+    </select>
+  </label>
+  <label>Category
+    <input type="text" name="category" value="{{ filter_category }}" list="cats" placeholder="any" />
+    <datalist id="cats">
+      {% for c in categories %}<option value="{{ c }}"></option>{% endfor %}
+    </datalist>
+  </label>
+  <label>Sort
+    <select name="sort">
+      <option value="top" {% if sort == 'top' %}selected{% endif %}>Most backed</option>
+      <option value="new" {% if sort == 'new' %}selected{% endif %}>Newest</option>
+    </select>
+  </label>
+  <button class="btn small">Apply</button>
+</form>
+
+<div class="idea-list">
+  {% for idea in ideas %}
+  <article class="idea-card">
+    <div class="score">{{ idea.score }}</div>
+    <div class="body">
+      <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
+      <p class="meta">
+        {{ idea.idea_type }} &middot; {{ idea.category }} &middot;
+        stage: {{ idea.stage|replace('_', ' ') }}
+        {% if idea.has_sealed_detail and not idea.sealed_is_public %}&middot; <span class="pill">sealed detail</span>{% endif %}
+      </p>
+      <p>{{ idea.summary }}</p>
+    </div>
+  </article>
+  {% else %}
+  <p class="empty">No ideas match those filters yet.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

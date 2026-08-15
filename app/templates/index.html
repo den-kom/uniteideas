@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero">
+  <h1>Stop sitting on your ideas.</h1>
+  <p class="lede">
+    Share an idea, get a timestamped proof that you shared it first, then find people
+    who want to build it with you.
+  </p>
+  <div class="hero-actions">
+    {% if user %}
+      <a class="btn" href="/submit">Submit an idea</a>
+    {% else %}
+      <a class="btn" href="/login">Get started</a>
+    {% endif %}
+    <a class="btn ghost" href="/ideas">Browse ideas</a>
+  </div>
+</section>
+
+<section class="how">
+  <h2>How it protects you</h2>
+  <div class="grid-3">
+    <article class="card">
+      <h3>1. Publish a one-pager</h3>
+      <p>A short public summary anyone can read, back, and offer to help with.</p>
+    </article>
+    <article class="card">
+      <h3>2. Seal the details</h3>
+      <p>Keep the full write-up sealed. We publish only its fingerprint until you choose to reveal it.</p>
+    </article>
+    <article class="card">
+      <h3>3. Keep the receipt</h3>
+      <p>Download a proof bundle. Anyone can verify the content and the time it was submitted.</p>
+    </article>
+  </div>
+</section>
+
+{% if top %}
+<section>
+  <h2>Most backed</h2>
+  <div class="idea-list">
+    {% for idea in top %}
+    <article class="idea-card">
+      <div class="score">{{ idea.score }}</div>
+      <div class="body">
+        <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
+        <p class="meta">{{ idea.idea_type }} &middot; {{ idea.category }} &middot; {{ idea.stage|replace('_', ' ') }}</p>
+        <p>{{ idea.summary }}</p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if recent %}
+<section>
+  <h2>Newest</h2>
+  <div class="idea-list">
+    {% for idea in recent %}
+    <article class="idea-card">
+      <div class="score">{{ idea.score }}</div>
+      <div class="body">
+        <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
+        <p class="meta">{{ idea.idea_type }} &middot; {{ idea.category }}</p>
+        <p>{{ idea.summary }}</p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if not top and not recent %}
+<section class="empty-state">
+  <h2>No ideas yet</h2>
+  <p>Be the first. {% if user %}<a href="/submit">Submit an idea</a>{% else %}<a href="/login">Sign in</a> to submit one{% endif %}.</p>
+</section>
+{% endif %}
+
+{% endblock %}

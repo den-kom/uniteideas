@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Welcome — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Welcome to UniteIdeas</h1>
+<p class="lede">
+  Most good ideas die because their owner is afraid someone will steal them. This
+  platform is built to remove that fear, so ideas get built instead of forgotten.
+</p>
+
+<ol class="tour">
+  <li>
+    <h2>Submit a one-pager</h2>
+    <p>
+      Write a short public description: the problem, who it helps, and roughly how it
+      works. That page is your idea's home. It is public so people can find it, back it,
+      and offer to help.
+    </p>
+  </li>
+  <li>
+    <h2>Seal what you are not ready to share</h2>
+    <p>
+      Put the full detail — dimensions, materials, algorithms, business model — in the
+      sealed field. It is encrypted at rest. Only a fingerprint of it is published, which
+      is enough to prove later that this exact text existed today.
+    </p>
+  </li>
+  <li>
+    <h2>Keep your receipt</h2>
+    <p>
+      Every submission gets a timestamped proof bundle you can download. Anyone can
+      verify it on the <a href="/verify">verify page</a> without seeing your sealed text.
+      It is evidence of when you had the idea, not a patent.
+    </p>
+  </li>
+  <li>
+    <h2>Your first post gets a quick review</h2>
+    <p>
+      The very first idea you submit is held for a moderator to look at, which keeps
+      spam off the site. Everything you submit after that goes live immediately. The
+      timestamp is recorded the moment you submit, not when it is approved.
+    </p>
+  </li>
+  <li>
+    <h2>Get backed</h2>
+    <p>
+      Signed-in members can back an idea once. Backing decides what rises to the top of
+      the feed and what gets attention from contributors.
+    </p>
+  </li>
+  <li>
+    <h2>Build a team</h2>
+    <p>
+      People ask to join and pledge the hours per week they can realistically give. You
+      approve who joins. Pledges are capped at {{ settings.max_pledge_hours_per_week }}h/week
+      across all projects so nobody over-commits.
+    </p>
+  </li>
+  <li>
+    <h2>Request a proof of concept</h2>
+    <p>
+      When you are ready, ask for a POC. The Agent System picks up the job, plans it,
+      builds it, tests it, and reports back. The demo stays visible to you alone until
+      you publish it.
+    </p>
+  </li>
+</ol>
+
+<form method="post" action="/onboarding/complete" class="inline">
+  <button class="btn">Got it — don't show this again</button>
+</form>
+<a class="btn ghost" href="/">Skip for now</a>
+
+{% endblock %}

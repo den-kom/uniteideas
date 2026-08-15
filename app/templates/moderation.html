@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Moderation — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Moderation queue</h1>
+
+<section>
+  <h2>First submissions awaiting review ({{ pending_ideas|length }})</h2>
+  <p class="fine">
+    Only an account's first-ever idea lands here. Approving it publishes the idea and
+    trusts the account for everything it posts afterwards.
+  </p>
+  {% for idea in pending_ideas %}
+  <div class="card">
+    <p class="meta">
+      {{ idea.created_at.strftime('%d %b %Y %H:%M') }} &middot;
+      {{ pending_owners[idea.owner_id].display_name if pending_owners[idea.owner_id] else idea.owner_id }}
+      &middot; {{ idea.idea_type }} &middot; {{ idea.category }}
+    </p>
+    <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
+    <p>{{ idea.summary }}</p>
+    <form method="post" action="/moderation/ideas/{{ idea.id }}/approve" class="inline">
+      <button class="btn small">Approve and publish</button>
+    </form>
+    <form method="post" action="/moderation/ideas/{{ idea.id }}/reject" class="stack">
+      <input type="text" name="note" placeholder="Reason shown to the author (optional)" />
+      <div class="row"><button class="btn small danger">Reject</button></div>
+    </form>
+  </div>
+  {% else %}
+  <p class="hint">Nothing waiting.</p>
+  {% endfor %}
+</section>
+
+<section>
+  <h2>Open reports ({{ open_reports|length }})</h2>
+  {% for r in open_reports %}
+  <div class="card">
+    <p class="meta">
+      {{ r.created_at.strftime('%d %b %Y %H:%M') }} &middot;
+      reported by {{ reporters[r.reporter_id].display_name if reporters[r.reporter_id] else r.reporter_id }}
+    </p>
+    <h3>
+      {% if ideas[r.idea_id] %}
+      <a href="/ideas/{{ r.idea_id }}">{{ ideas[r.idea_id].title }}</a>
+      {% else %}{{ r.idea_id }}{% endif %}
+    </h3>
+    <p>{{ r.reason }}</p>
+    <form method="post" action="/reports/{{ r.id }}/dismiss" class="stack">
+      <input type="text" name="note" placeholder="Resolution note (optional)" />
+      <div class="row">
+        <button class="btn small ghost">Dismiss</button>
+      </div>
+    </form>
+    <form method="post" action="/reports/{{ r.id }}/remove-idea" class="inline">
+      <button class="btn small danger">Remove idea</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="hint">Nothing to review.</p>
+  {% endfor %}
+</section>
+
+<section>
+  <h2>Recently resolved</h2>
+  {% if closed_reports %}
+  <ul class="plain">
+    {% for r in closed_reports %}
+    <li>
+      {{ ideas[r.idea_id].title if ideas[r.idea_id] else r.idea_id }}
+      <span class="fine">{{ r.status }}{% if r.resolution_note %} — {{ r.resolution_note }}{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="hint">Nothing resolved yet.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

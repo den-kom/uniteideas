@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Check your email — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Check your email</h1>
+<p>We sent a sign-in link to <strong>{{ email }}</strong>. It expires in
+  {{ settings.magic_link_ttl_minutes }} minutes and works once.</p>
+
+{% if dev_link %}
+<div class="card dev">
+  <h3>Development mode</h3>
+  <p>No mail server is configured yet, so here is the link directly:</p>
+  <p><a class="btn" href="{{ dev_link }}">Sign in now</a></p>
+  <p class="fine">Turn this off by setting <code>DEV_SHOW_MAGIC_LINK=false</code>. Copies of
+    all outgoing mail are written to <code>data/outbox/</code>.</p>
+</div>
+{% endif %}
+
+{% endblock %}

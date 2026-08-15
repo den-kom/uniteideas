@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}{{ idea.title }} — UniteIdeas{% endblock %}
+{% block content %}
+
+{% set idx = stages.index(idea.stage) if idea.stage in stages else -1 %}
+
+<article class="onepager">
+  {% if idea.status == 'pending_review' %}
+  <p class="flash bad">
+    This is your first submission, so it is awaiting a moderator review before it
+    appears publicly. Your proof and timestamp are already recorded.
+  </p>
+  {% elif idea.status == 'removed' %}
+  <p class="flash bad">
+    This idea has been removed by a moderator.{% if idea.review_note %} {{ idea.review_note }}{% endif %}
+  </p>
+  {% endif %}
+  <p class="meta">
+    {{ idea.idea_type }} &middot; {{ idea.category }} &middot;
+    by {{ idea.owner.display_name }} &middot;
+    {{ idea.created_at.strftime('%d %b %Y') }}
+  </p>
+  <h1>{{ idea.title }}</h1>
+  <p class="lede">{{ idea.summary }}</p>
+
+  <div class="row">
+    <form method="post" action="/ideas/{{ idea.id }}/vote" class="inline">
+      <button class="btn" {% if has_voted or not user %}disabled{% endif %}>
+        Back this idea ({{ idea.score }})
+      </button>
+    </form>
+    {% if not user %}<span class="hint">Sign in to back or join.</span>{% endif %}
+    {% if has_voted %}<span class="hint">You backed this.</span>{% endif %}
+  </div>
+
+  <section class="progress">
+    <h2>Progress</h2>
+    <ol class="stages">
+      {% for s in stages %}
+      <li class="{% if idx >= loop.index0 %}done{% endif %}">{{ s|replace('_', ' ') }}</li>
+      {% endfor %}
+    </ol>
+    {% if idea.stage == 'needs_attention' %}
+      <p class="flash bad">This POC needs human attention.</p>
+    {% endif %}
+  </section>
+
+  {% if idea.public_body %}
+  <section>
+    <h2>The idea</h2>
+    <div class="prose">{{ idea.public_body }}</div>
+  </section>
+  {% endif %}
+
+  <section class="proof-box">
+    <h2>Proof of authorship</h2>
+    {% if proof %}
+    <dl>
+      <dt>Submitted</dt><dd>{{ proof.created_at.strftime('%d %b %Y %H:%M') }} UTC</dd>
+      <dt>Algorithm</dt><dd>{{ proof.algorithm }}</dd>
+      <dt>Content fingerprint</dt><dd><code>{{ proof.content_hash }}</code></dd>
+      <dt>Anchor</dt><dd>{{ proof.anchor_provider }}</dd>
+    </dl>
+    <p>
+      <a class="btn small" href="/ideas/{{ idea.id }}/proof-bundle.json">Download proof bundle</a>
+      <a class="btn small ghost" href="/verify">Verify it</a>
+    </p>
+    <p class="fine">
+      Anyone can check this bundle without seeing the sealed detail. The bundle contains the
+      fingerprint of the sealed text, not the text itself.
+    </p>
+    {% else %}
+    <p>No proof record for this idea.</p>
+    {% endif %}
+  </section>
+
+  {% if idea.has_sealed_detail %}
+  <section class="sealed">
+    <h2>Sealed detail
+      {% if idea.sealed_is_public %}<span class="pill open">revealed</span>{% else %}<span class="pill">sealed</span>{% endif %}
+    </h2>
+    {% if can_see_sealed and sealed_text %}
+      <div class="prose">{{ sealed_text }}</div>
+    {% else %}
+      <p class="hint">
+        The owner has kept the full write-up sealed. Its fingerprint is part of the public
+        proof above, so it can be verified later without being published now.
+      </p>
+    {% endif %}
+    {% if is_owner and not idea.sealed_is_public %}
+      <form method="post" action="/ideas/{{ idea.id }}/reveal" class="inline">
+        <button class="btn small">Reveal publicly</button>
+      </form>
+      <p class="fine">Revealing is permanent and makes this text public prior art.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if idea.attachments %}
+  <section>
+    <h2>Attachments</h2>
+    <ul>
+      {% for a in idea.attachments %}
+      <li>
+        <a href="/files/{{ a.id }}">{{ a.filename }}</a>
+        <span class="fine">{{ a.content_type }} &middot; {{ a.sha256[:16] }}…</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Proof of concept</h2>
+    {% if show_demo and build %}
+      <p><a class="btn" href="{{ build.preview_url }}" target="_blank" rel="noopener">Open the demo</a></p>
+      <p class="fine">Status: {{ build.status|replace('_', ' ') }}{% if not build.is_public %} &middot; visible to you only{% endif %}</p>
+    {% elif build %}
+      <p>Status: <strong>{{ build.status|replace('_', ' ') }}</strong></p>
+      {% if build.notes %}<div class="prose fine">{{ build.notes }}</div>{% endif %}
+    {% else %}
+      <p class="hint">No POC requested yet.</p>
+    {% endif %}
+
+    {% if is_owner %}
+      {% if not build or build.status in ['failed', 'escalated', 'demo_ready'] %}
+      <form method="post" action="/ideas/{{ idea.id }}/request-poc" class="inline">
+        <button class="btn small">Request a POC from the Agent System</button>
+      </form>
+      {% endif %}
+      {% if build and build.preview_url %}
+      <form method="post" action="/ideas/{{ idea.id }}/demo-visibility" class="inline">
+        <input type="hidden" name="make_public" value="{{ '0' if build.is_public else '1' }}" />
+        <button class="btn small ghost">{{ 'Make demo private' if build.is_public else 'Publish demo' }}</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Team</h2>
+    {% if members %}
+    <ul>
+      {% for m in members %}
+      <li>{{ member_users[m.user_id].display_name if member_users[m.user_id] else m.user_id }}
+        — {{ m.role_in_team }}, {{ m.pledged_hours_per_week }}h/week pledged</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">No contributors yet.</p>
+    {% endif %}
+
+    {% if user and not is_owner and not is_member %}
+      {% if join_request %}
+        <p class="hint">Your request is <strong>{{ join_request.status }}</strong>.</p>
+      {% else %}
+      <form method="post" action="/ideas/{{ idea.id }}/join" class="stack">
+        <label>Why do you want to help?
+          <textarea name="message" rows="3" placeholder="What you'd work on"></textarea>
+        </label>
+        <label>Hours per week you can commit
+          <input type="number" name="pledged_hours_per_week" min="1"
+                 max="{{ settings.max_pledge_hours_per_week }}" value="5" />
+        </label>
+        <p class="fine">
+          Cap is {{ settings.max_pledge_hours_per_week }}h/week across all projects.
+          More than {{ settings.soft_pledge_hours_per_week }}h/week is a heavy commitment.
+        </p>
+        <button class="btn small">Ask to join</button>
+      </form>
+      {% endif %}
+    {% endif %}
+
+    {% if is_owner and pending_joins %}
+    <h3>Requests to join</h3>
+    {% for j in pending_joins %}
+    <div class="card">
+      <p><strong>{{ join_users[j.user_id].display_name if join_users[j.user_id] else j.user_id }}</strong>
+        — {{ j.pledged_hours_per_week }}h/week</p>
+      {% if j.message %}<p>{{ j.message }}</p>{% endif %}
+      <form method="post" action="/joins/{{ j.id }}/approve" class="inline"><button class="btn small">Approve</button></form>
+      <form method="post" action="/joins/{{ j.id }}/decline" class="inline"><button class="btn small ghost">Decline</button></form>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </section>
+
+  {% if user and not is_owner %}
+  <section>
+    <details>
+      <summary>Report this idea</summary>
+      <form method="post" action="/ideas/{{ idea.id }}/report" class="stack">
+        <textarea name="reason" rows="3" placeholder="What's wrong with it?"></textarea>
+        <button class="btn small ghost">Send report</button>
+      </form>
+    </details>
+  </section>
+  {% endif %}
+</article>
+
+{% endblock %}

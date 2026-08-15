@@ -1,0 +1,16 @@
+[Unit]
+Description=UniteIdeas.org web app (idea incubator MVP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/usrbob/uniteideas
+EnvironmentFile=/home/usrbob/uniteideas/.env
+Environment=PATH=/home/usrbob/uniteideas/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/usrbob/uniteideas/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8100
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Sign in — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>Sign in</h1>
+<p class="lede">
+  No passwords. We email you a one-time link that signs you in and expires in
+  {{ settings.magic_link_ttl_minutes }} minutes.
+</p>
+
+<form method="post" action="/login" class="stack form narrow">
+  <label>Email
+    <input type="email" name="email" required placeholder="you@example.com" />
+  </label>
+  <label>Display name (new accounts only)
+    <input type="text" name="display_name" maxlength="80" placeholder="How you want to be credited" />
+  </label>
+  <button class="btn">Email me a sign-in link</button>
+</form>
+
+<p class="fine">
+  Ideas are never anonymous: every submission is bound to a verified email account so
+  authorship proofs mean something.
+</p>
+
+{% endblock %}
