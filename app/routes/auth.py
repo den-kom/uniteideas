@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import mailer
-from app.config import get_settings
+from app.config import base_url_for, get_settings
 from app.db import get_db
 from app.models import ROLE_ADMIN, ROLE_USER, User
 from app.security import (
@@ -45,7 +45,7 @@ def login_request(
         return RedirectResponse("/login?err=Enter+a+valid+email+address", status_code=303)
 
     token = create_login_token(db, clean_email)
-    link = f"{settings.public_base_url}/auth/verify?token={quote(token)}"
+    link = f"{base_url_for(request)}/auth/verify?token={quote(token)}"
     if display_name.strip():
         link += f"&display_name={quote(display_name.strip())}"
 

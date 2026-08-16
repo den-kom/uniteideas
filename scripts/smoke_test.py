@@ -32,12 +32,21 @@ os.environ.update(
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient  # noqa: E402
+from starlette.datastructures import URL  # noqa: E402
 
 from app.main import app  # noqa: E402
 from app.proof import sha256_text  # noqa: E402
 
 PASSED: list[str] = []
 LINK_RE = re.compile(r'href="([^"]*/auth/verify\?token=[^"]+)"')
+
+
+class FakeRequest:
+    """Carries only the two attributes base_url_for reads off a real request."""
+
+    def __init__(self, url: str) -> None:
+        self.url = URL(url)
+        self.base_url = self.url.replace(path="/", query="", fragment="")
 
 
 def check(label: str, condition: bool, detail: str = "") -> None:
@@ -258,7 +267,47 @@ def main() -> None:
         check("type filter works", "Pet guard" in anon.get("/ideas?type=physical").text)
         check("type filter excludes", "Pet guard" not in anon.get("/ideas?type=digital").text)
 
+    check_base_url_resolution()
     print(f"\n{len(PASSED)} checks passed")
+
+
+def check_base_url_resolution() -> None:
+    """Sign-in links must come back to whichever host you are actually using.
+
+    A branch preview runs on its own port with no .env, so a link built from a
+    hard-coded base URL would send you to the live site with a token only the
+    preview knows about. These checks pin that behaviour down, including the
+    refusal that stops a public deployment trusting a client-supplied Host.
+    """
+    from app import config
+
+    def resolve(url: str) -> str:
+        config.get_settings.cache_clear()
+        try:
+            return config.base_url_for(FakeRequest(url))
+        finally:
+            config.get_settings.cache_clear()
+
+    check("a pinned base url wins over the request", resolve("http://10.0.0.5:9999/login") == "http://testserver")
+
+    pinned, os.environ["PUBLIC_BASE_URL"] = os.environ["PUBLIC_BASE_URL"], ""
+    try:
+        check(
+            "an unpinned preview builds links on its own port",
+            resolve("http://10.0.0.5:8101/login") == "http://10.0.0.5:8101",
+        )
+        check(
+            "an unpinned localhost preview works too",
+            resolve("http://127.0.0.1:8102/login") == "http://127.0.0.1:8102",
+        )
+        try:
+            resolve("http://uniteideas.org/login")
+            check("an unpinned public host is refused", False, "it built a link anyway")
+        except RuntimeError as exc:
+            check("an unpinned public host is refused", "PUBLIC_BASE_URL is not set" in str(exc))
+    finally:
+        os.environ["PUBLIC_BASE_URL"] = pinned
+        config.get_settings.cache_clear()
 
 
 if __name__ == "__main__":
