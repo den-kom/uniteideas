@@ -1,14 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}UniteIdeas{% endblock %}</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <title>{% block title %}UniteIdeas — share an idea, keep the proof, find a team{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}UniteIdeas is a community for people with ideas. Share a public one-pager, seal the details, keep a timestamped proof, and find others who want to build it with you.{% endblock %}" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/logo.png" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="/">Unite<span>Ideas</span></a>
+  <a class="brand" href="/">
+    <img src="/static/logo.png" width="36" height="36" alt="" />
+    Unite<span>Ideas</span>
+  </a>
   <nav class="nav">
     <a href="/ideas">Browse</a>
     <a href="/verify">Verify a proof</a>
@@ -19,8 +33,9 @@
       {% if user.is_admin %}<a href="/admin/users">Users</a>{% endif %}
       <form method="post" action="/logout" class="inline"><button class="link">Sign out</button></form>
     {% else %}
-      <a href="/login" class="cta">Sign in</a>
+      <a href="/login" class="cta">Join in</a>
     {% endif %}
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch colour theme">Light</button>
   </nav>
 </header>
 
@@ -38,11 +53,28 @@
 
 <footer class="footer">
   <p>
-    UniteIdeas is a place to share ideas safely, prove when you shared them, and build them with others.
+    UniteIdeas is a community: share ideas safely, prove when you shared them, and build them with others.
   </p>
   <p class="fine">
     Proof receipts are evidence that content existed at a given time. They are not patents and not legal advice.
   </p>
 </footer>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById("theme-toggle");
+    if (!btn) return;
+    function label() {
+      btn.textContent = root.getAttribute("data-theme") === "light" ? "Dark" : "Light";
+    }
+    label();
+    btn.addEventListener("click", function () {
+      var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+      label();
+    });
+  })();
+</script>
 </body>
 </html>

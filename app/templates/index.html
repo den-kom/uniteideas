@@ -1,37 +1,73 @@
 {% extends "base.html" %}
+{% block title %}UniteIdeas — share an idea, keep the proof, find a team{% endblock %}
+
 {% block content %}
 
 <section class="hero">
+  <p class="eyebrow">A community for people with ideas</p>
   <h1>Stop sitting on your ideas.</h1>
   <p class="lede">
-    Share an idea, get a timestamped proof that you shared it first, then find people
-    who want to build it with you.
+    Bring it here. Get a timestamp that you shared it first. Find people who
+    want to build it with you.
   </p>
   <div class="hero-actions">
     {% if user %}
-      <a class="btn" href="/submit">Submit an idea</a>
+      <a class="btn" href="/submit">Share an idea</a>
     {% else %}
-      <a class="btn" href="/login">Get started</a>
+      <a class="btn" href="/login">Join the community</a>
     {% endif %}
     <a class="btn ghost" href="/ideas">Browse ideas</a>
   </div>
 </section>
 
-<section class="how">
-  <h2>How it protects you</h2>
-  <div class="grid-3">
-    <article class="card">
+<section class="how" aria-labelledby="how-heading">
+  <h2 id="how-heading">How it works</h2>
+  <p class="lede">Three steps. No jargon. Built so fear of being scooped does not kill the idea.</p>
+
+  <ol class="flow" aria-label="Share, seal, keep the receipt">
+    <li>
+      <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="10" y="14" width="44" height="36" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path d="M18 24h28M18 32h20M18 40h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
       <h3>1. Publish a one-pager</h3>
       <p>A short public summary anyone can read, back, and offer to help with.</p>
-    </article>
-    <article class="card">
+    </li>
+    <li aria-hidden="true" class="flow-arrow">→</li>
+    <li>
+      <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="16" y="28" width="32" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path d="M24 28v-6a8 8 0 0 1 16 0v6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
       <h3>2. Seal the details</h3>
       <p>Keep the full write-up sealed. We publish only its fingerprint until you choose to reveal it.</p>
-    </article>
-    <article class="card">
+    </li>
+    <li aria-hidden="true" class="flow-arrow">→</li>
+    <li>
+      <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="18" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path d="M32 20v12l8 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
       <h3>3. Keep the receipt</h3>
-      <p>Download a proof bundle. Anyone can verify the content and the time it was submitted.</p>
-    </article>
+      <p>Download a proof bundle. Anyone can check the content and the time it was submitted.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="card community">
+  <h2>This only works if we show up</h2>
+  <p>
+    UniteIdeas is a community, not a company brochure. The more people who share,
+    back, and offer time, the more ideas leave the notebook. Proof is there so
+    you can start without the fear that someone will take it from you.
+  </p>
+  <div class="hero-actions">
+    {% if user %}
+      <a class="btn" href="/submit">Share yours</a>
+    {% else %}
+      <a class="btn" href="/login">Join in</a>
+    {% endif %}
+    <a class="btn ghost" href="/verify">Verify a proof</a>
   </div>
 </section>
 
@@ -73,8 +109,8 @@
 
 {% if not top and not recent %}
 <section class="empty-state">
-  <h2>No ideas yet</h2>
-  <p>Be the first. {% if user %}<a href="/submit">Submit an idea</a>{% else %}<a href="/login">Sign in</a> to submit one{% endif %}.</p>
+  <h2>No ideas yet — the community starts with one</h2>
+  <p>Be the first. {% if user %}<a href="/submit">Share an idea</a>{% else %}<a href="/login">Join in</a> to share one{% endif %}.</p>
 </section>
 {% endif %}
 
