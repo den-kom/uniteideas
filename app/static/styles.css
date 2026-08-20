@@ -72,8 +72,8 @@ main {
   text-decoration: none;
   color: var(--ink);
 }
+.brand:hover { color: var(--accent); }
 .brand img { display: block; border-radius: 50%; }
-.brand span { color: var(--accent); }
 .nav { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .nav a { text-decoration: none; color: var(--muted); font-size: 15px; }
 .nav a:hover { color: var(--ink); }
@@ -272,39 +272,30 @@ ul.plain li { padding: 9px 0; border-bottom: 1px solid var(--line); }
 
 .flow {
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
   align-items: stretch;
   padding: 0;
   margin: 20px 0 8px;
 }
 .flow > li {
-  flex: 1 1 180px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
+  display: flex;
+  flex-direction: column;
 }
+.flow > li h3 { margin-top: 0; }
+.flow > li p { margin-bottom: 0; flex: 1; }
 .flow-icon {
   width: 48px;
   height: 48px;
   color: var(--accent);
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
-.flow-arrow {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--muted);
-  font-size: 22px;
-}
-.community { margin-top: 28px; }
-.community .hero-actions { margin-top: 16px; }
 
 .footer {
   max-width: 900px;
@@ -315,9 +306,12 @@ ul.plain li { padding: 9px 0; border-bottom: 1px solid var(--line); }
   font-size: 14px;
 }
 
+@media (max-width: 700px) {
+  .flow { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 600px) {
   .hero h1 { font-size: 30px; }
   .two-up { grid-template-columns: 1fr; }
   .proof-box dl, .card dl { grid-template-columns: 1fr; }
-  .flow-arrow { display: none; }
 }

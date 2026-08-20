@@ -17,6 +17,7 @@
       <a class="btn" href="/login">Join the community</a>
     {% endif %}
     <a class="btn ghost" href="/ideas">Browse ideas</a>
+    <a class="btn ghost" href="/verify">Verify a proof</a>
   </div>
 </section>
 
@@ -33,7 +34,6 @@
       <h3>1. Publish a one-pager</h3>
       <p>A short public summary anyone can read, back, and offer to help with.</p>
     </li>
-    <li aria-hidden="true" class="flow-arrow">→</li>
     <li>
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <rect x="16" y="28" width="32" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="3"/>
@@ -42,7 +42,6 @@
       <h3>2. Seal the details</h3>
       <p>Keep the full write-up sealed. We publish only its fingerprint until you choose to reveal it.</p>
     </li>
-    <li aria-hidden="true" class="flow-arrow">→</li>
     <li>
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="32" cy="32" r="18" fill="none" stroke="currentColor" stroke-width="3"/>
@@ -52,23 +51,6 @@
       <p>Download a proof bundle. Anyone can check the content and the time it was submitted.</p>
     </li>
   </ol>
-</section>
-
-<section class="card community">
-  <h2>This only works if we show up</h2>
-  <p>
-    UniteIdeas is a community, not a company brochure. The more people who share,
-    back, and offer time, the more ideas leave the notebook. Proof is there so
-    you can start without the fear that someone will take it from you.
-  </p>
-  <div class="hero-actions">
-    {% if user %}
-      <a class="btn" href="/submit">Share yours</a>
-    {% else %}
-      <a class="btn" href="/login">Join in</a>
-    {% endif %}
-    <a class="btn ghost" href="/verify">Verify a proof</a>
-  </div>
 </section>
 
 {% if top %}
