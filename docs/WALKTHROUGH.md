@@ -1,6 +1,6 @@
 # Milestone 1 walkthrough
 
-Ten minutes, two browser profiles, no agents involved. Everything below runs
+Ten minutes, two browser profiles. Everything below runs
 against `http://10.0.0.5:8100`.
 
 Open a normal window for the **owner** and a private/incognito window for the
@@ -14,9 +14,9 @@ Open a normal window for the **owner** and a private/incognito window for the
    Click **Sign in now**.
 
 The first account created on a fresh database becomes admin, so this account
-also gets the Moderation and Users tabs.
+also gets the Moderation and Admin tabs.
 
-You land on the tour. Read it or click **Got it**.
+You land on a short questionnaire (name, what you can help with). Fill it in or skip it, then read the tour.
 
 ## 2. Submit an idea
 
@@ -79,30 +79,13 @@ detail.
 2. In the owner window, open **Moderation**. The report is in the second queue,
    below the first-submission queue, with the reporter and the reason.
 3. Either **Dismiss** with a note, or **Remove idea**, which unpublishes it.
-4. **Users** lets the admin promote someone to moderator.
+4. **Admin** (admins only) lists members: promote someone to moderator, or suspend an account with a reason. The audit log records each action.
 
-## 8. The POC hand-off
+## 8. Verify an idea
 
-As the owner, click **Request a POC from the Agent System**. That creates a
-queued job that UniteIdeas owns. Nothing is running to pick it up yet, so you
-can simulate the Agent System from the VM:
-
-```bash
-cd /home/usrbob/uniteideas
-TOKEN=$(grep '^AGENT_API_TOKEN=' .env | cut -d= -f2-)
-
-curl -s -H "Authorization: Bearer $TOKEN" \
-  http://10.0.0.5:8100/api/agent/queue
-
-curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"building","notes":"Scaffolding the demo","claim":true}' \
-  http://10.0.0.5:8100/api/agent/builds/<build_id>
-```
-
-Reload the one-pager: the progress bar advances. Report `demo_ready` with a
-`preview_url` and an **Open the demo** button appears — visible to the owner
-only until they click **Publish demo**.
+Open `/verify` in the helper window (no account needed), paste the idea's link and press **Check**.
+You see when it was recorded, whether the content is unchanged, and the public timestamp state:
+"waiting" for a few hours, then "confirmed" with a Bitcoin block number. The one-pager shows the same.
 
 ## Resetting
 

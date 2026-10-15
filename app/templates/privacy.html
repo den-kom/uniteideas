@@ -1,0 +1,75 @@
+{% extends "legal.html" %}
+{% block title %}Privacy policy — UniteIdeas{% endblock %}
+{% block meta_description %}What UniteIdeas collects, why, who can see it, how long we keep it, and how to ask for your data to be changed or removed.{% endblock %}
+{% block legal_title %}Privacy policy{% endblock %}
+{% block legal_body %}
+
+<h2 id="summary">The short version</h2>
+<ul>
+  <li>We collect what we need to run the site: your email, your name, what you choose to put on your profile and ideas, and basic technical logs.</li>
+  <li>Your email is never shown to other members.</li>
+  <li>We do not sell your data and we do not run advertising trackers.</li>
+  <li>Sealed detail is encrypted and is not used for suggestions or matching.</li>
+  <li>A fingerprint of each idea goes on a public blockchain and cannot be taken back.</li>
+</ul>
+
+<h2 id="collect">What we collect</h2>
+<table class="table">
+  <thead><tr><th>Information</th><th>Why</th><th>Who can see it</th></tr></thead>
+  <tbody>
+    <tr><td>Email address</td><td>Sign-in, notices about your account</td><td>You, administrators</td></tr>
+    <tr><td>Name</td><td>Credit on ideas, your profile</td><td>Everyone (as shown on your ideas and profile)</td></tr>
+    <tr><td>Profile: one-line summary, skills, goals, hours per week, location, about you</td><td>Help teams find the right people; later, suggest matches</td><td>Everyone if your profile is public; otherwise you and staff</td></tr>
+    <tr><td>Ideas: public one-pager, category, attachments you make public</td><td>The core of the site</td><td>Everyone</td></tr>
+    <tr><td>Sealed detail and private attachments</td><td>Store them safely for you and your team</td><td>You, your approved team, and staff only when reviewing a report or first submission (logged)</td></tr>
+    <tr><td>Fingerprints and receipts</td><td>Proof of when you submitted</td><td>Everyone (the fingerprint contains none of your text)</td></tr>
+    <tr><td>Backing, join requests, reports</td><td>Run the community</td><td>Backing counts are public; requests go to the idea's owner; reports go to moderators</td></tr>
+    <tr><td>Technical logs (address, time, page)</td><td>Security and fixing faults</td><td>Administrators</td></tr>
+  </tbody>
+</table>
+
+<h2 id="cookies">Cookies and local storage</h2>
+<p>
+  We set one sign-in cookie so you stay signed in, and remember your light or dark theme in your browser. Both are needed for the site to work as you expect,
+  and neither tracks you across other websites. We do not use advertising or analytics cookies today. If that changes we will say so here and ask first.
+</p>
+
+<h2 id="share">Who else receives your data</h2>
+<ul>
+  <li><strong>Public timestamp services.</strong> Only an idea's fingerprint is sent. They are run by third parties and the result is public.</li>
+  <li><strong>Our hosting and email providers,</strong> who process data for us to run the site and send sign-in links.</li>
+  <li><strong>Automated helpers.</strong> Tools used for moderation help and suggestions work on public content and profile details you chose to share. They do not receive sealed detail.</li>
+  <li><strong>Authorities,</strong> when the law requires it.</li>
+</ul>
+<p>We do not sell personal information.</p>
+
+<h2 id="keep">How long we keep it</h2>
+<p>
+  We keep your account while it is open. If you close it, we delete or anonymise your personal details and profile.
+  Ideas other members have backed or joined may stay, credited to a removed member, unless you ask us to remove them and there is no reason to keep them.
+  We keep a limited record of staff actions and reports where it is needed for safety or the law.
+  Fingerprints already written to a blockchain cannot be deleted by anyone.
+</p>
+
+<h2 id="rights">Your choices</h2>
+<ul>
+  <li>Edit your profile and visibility any time from your profile page.</li>
+  <li>Ask for a copy of the personal information we hold about you, ask us to correct it, or ask us to close your account and delete it: write to <a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a>.</li>
+  <li>If you are not happy with how we handle a request, you can complain to the privacy regulator where you live. In Australia that is the Office of the Australian Information Commissioner.</li>
+</ul>
+
+<h2 id="security">Keeping it safe</h2>
+<p>
+  Sealed detail is encrypted when stored. Sign-in links work once and expire. Staff actions that reveal or change something are logged.
+  No system is perfectly secure; if something goes wrong that affects you, we will tell you.
+</p>
+
+<h2 id="children">Children</h2>
+<p>UniteIdeas is for people aged 18 and over. If you think a younger person has joined, tell us and we will remove the account.</p>
+
+<h2 id="where">Where data is stored</h2>
+<p>Data is stored on servers we choose and may change. We will update this page when the hosting location is set for launch.</p>
+
+<h2 id="changes">Changes</h2>
+<p>If we change this policy in a way that matters, we will tell members before it applies.</p>
+{% endblock %}

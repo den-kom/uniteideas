@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Admin — UniteIdeas{% endblock %}
+{% block content %}
+<h1>Admin</h1>
+
+<div class="stat-grid">
+  <div class="stat"><span class="stat-num">{{ stats.members }}</span><span>members</span></div>
+  <div class="stat"><span class="stat-num">{{ stats.ideas }}</span><span>published ideas</span></div>
+  <a class="stat {% if stats.waiting %}stat-alert{% endif %}" href="/moderation"><span class="stat-num">{{ stats.waiting }}</span><span>first posts waiting</span></a>
+  <a class="stat {% if stats.reports %}stat-alert{% endif %}" href="/moderation"><span class="stat-num">{{ stats.reports }}</span><span>open reports</span></a>
+  <a class="stat" href="/admin/timestamps"><span class="stat-num">{{ stats.ts_pending }}</span><span>timestamps in progress</span></a>
+  <a class="stat {% if stats.ts_failed %}stat-alert{% endif %}" href="/admin/timestamps"><span class="stat-num">{{ stats.ts_failed }}</span><span>timestamps failed</span></a>
+</div>
+
+<p class="row">
+  <a class="btn small" href="/admin/users">Members and roles</a>
+  <a class="btn small ghost" href="/admin/audit">Audit log</a>
+  <a class="btn small ghost" href="/admin/timestamps">Timestamp queue</a>
+  <a class="btn small ghost" href="/moderation">Moderation queue</a>
+</p>
+
+<h2>Recent staff activity</h2>
+{% if recent %}
+<ul class="plain">
+  {% for r in recent %}
+  <li>{{ r.created_at.strftime('%d %b %H:%M') }} · <strong>{{ r.actor_name }}</strong> {{ r.action }}
+    <span class="fine">{{ r.target_type }} {{ r.target_id }} {{ r.detail }}</span></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">Nothing yet.</p>
+{% endif %}
+{% endblock %}

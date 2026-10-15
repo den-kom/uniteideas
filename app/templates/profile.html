@@ -3,7 +3,15 @@
 {% block content %}
 
 <h1>{{ user.display_name }}</h1>
+{% if user.headline %}<p class="lede">{{ user.headline }}</p>{% endif %}
 <p class="meta">Role: {{ user.role }} &middot; joined {{ user.created_at.strftime('%d %b %Y') }}</p>
+<p class="row">
+  <a class="btn small" href="/profile/edit">Edit profile</a>
+  <a class="btn small ghost" href="/u/{{ user.id }}">View public profile</a>
+</p>
+{% if not user.profile_done %}
+<p class="flash ok">Your profile is empty. <a href="/profile/edit">Add your skills</a> so teams can find you.</p>
+{% endif %}
 <p class="meta">
   Time pledged across projects: {{ pledged_total }}h/week
   (cap {{ settings.max_pledge_hours_per_week }}h/week)
@@ -16,7 +24,7 @@
     {% for idea in my_ideas %}
     <li>
       <a href="/ideas/{{ idea.id }}">{{ idea.title }}</a>
-      <span class="fine">{{ idea.score }} backers &middot; {{ idea.stage|replace('_', ' ') }}
+      <span class="fine">{{ idea.score }} backers
         {% if idea.status != 'published' %}&middot; {{ idea.status }}{% endif %}</span>
     </li>
     {% endfor %}

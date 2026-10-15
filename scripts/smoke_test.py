@@ -26,6 +26,7 @@ os.environ.update(
         "PUBLIC_BASE_URL": "http://testserver",
         "DEV_SHOW_MAGIC_LINK": "true",
         "MAX_PLEDGE_HOURS_PER_WEEK": "40",
+        "TIMESTAMP_PROVIDER": "none",
     }
 )
 
@@ -139,9 +140,41 @@ def main() -> None:
             "/verify",
             files={"bundle": ("bundle.json", json.dumps(bundle).encode(), "application/json")},
         )
-        check("verification page reports success", "Verified" in verified.text)
-        check("registry check passed", verified.text.count("PASS") >= 3, verified.text[:400])
+        check("verification page reports success", "This idea checks out" in verified.text)
+        check("registry check passed", verified.text.count("passed.") >= 3, verified.text[:400])
+        anon_lookup = TestClient(app)
+        by_id = anon_lookup.get(f"/verify?q={idea_id}")
+        check("anyone can look up an idea by id", "This idea checks out" in by_id.text)
+        check("lookup shows the public idea title", "Pet guard for office chair wheels" in by_id.text)
+        by_link = anon_lookup.get(f"/verify?q=http://10.0.0.5:8100/ideas/{idea_id}")
+        check("lookup accepts a pasted link", "This idea checks out" in by_link.text)
+        by_hash = anon_lookup.get(f"/verify?q={bundle['receipt']['content_hash']}")
+        check("lookup accepts a fingerprint", "This idea checks out" in by_hash.text)
+        check(
+            "unchanged content is checked server-side",
+            "unchanged since it was timestamped" in by_id.text,
+        )
+        missing = anon_lookup.get("/verify?q=idea-00000000")
+        check("unknown idea says no record found", "No record found" in missing.text)
+        canonical_file = anon_lookup.get(f"/ideas/{idea_id}/canonical.json")
+        check(
+            "canonical file hashes to the fingerprint",
+            sha256_text(canonical_file.text) == bundle["receipt"]["content_hash"],
+        )
+        check(
+            "no timestamp file when none was requested",
+            anon_lookup.get(f"/ideas/{idea_id}/proof.ots").status_code == 404,
+        )
+        check("public timestamp shown as not requested", "Not requested" in page.text)
 
+        check("signature check shown", "UniteIdeas signature on the receipt" in verified.text)
+        forged = json.loads(json.dumps(bundle))
+        forged["receipt"]["submitted_at_utc"] = "2020-01-01T00:00:00"
+        forged_res = owner.post(
+            "/verify",
+            files={"bundle": ("bundle.json", json.dumps(forged).encode(), "application/json")},
+        )
+        check("forged receipt time is rejected", "Something does not check out" in forged_res.text)
         tampered = json.loads(json.dumps(bundle))
         tampered["canonical_payload"] = tampered["canonical_payload"].replace(
             "Pet guard", "Stolen guard"
@@ -150,7 +183,7 @@ def main() -> None:
             "/verify",
             files={"bundle": ("bundle.json", json.dumps(tampered).encode(), "application/json")},
         )
-        check("tampered bundle is rejected", "Could not verify" in rejected.text)
+        check("tampered bundle is rejected", "Something does not check out" in rejected.text)
 
         anon = TestClient(app)
         public_page = anon.get(idea_url)
@@ -165,9 +198,33 @@ def main() -> None:
 
         voted = helper.post(f"/ideas/{idea_id}/vote", follow_redirects=False)
         check("upvote accepted", voted.status_code == 303)
-        again = helper.post(f"/ideas/{idea_id}/vote", follow_redirects=True)
-        check("second upvote refused", "already backed" in again.text)
-        check("score is exactly one", "Back this idea (1)" in helper.get(idea_url).text)
+        page_after = helper.get(f"/ideas/{idea_id}")
+        check("backed state shows on the idea page", "is-on" in page_after.text)
+        again = helper.post(
+            f"/ideas/{idea_id}/vote", headers={"Accept": "application/json"}
+        )
+        check(
+            "voting again takes the backing away",
+            again.json() == {"score": 0, "backed": False},
+            again.text,
+        )
+        back = helper.post(f"/ideas/{idea_id}/vote", headers={"Accept": "application/json"})
+        check("backing again restores it", back.json() == {"score": 1, "backed": True}, back.text)
+        offsite = helper.post(
+            f"/ideas/{idea_id}/vote",
+            data={"next": "https://evil.example/x"},
+            follow_redirects=False,
+        )
+        check(
+            "vote redirect never leaves the site",
+            offsite.headers["location"].startswith(f"/ideas/{idea_id}"),
+            offsite.headers["location"],
+        )
+        helper.post(f"/ideas/{idea_id}/vote")  # back to a backed state for later checks
+        check(
+            "score is exactly one",
+            'data-count>1</span>' in helper.get(idea_url).text,
+        )
 
         joined = helper.post(
             f"/ideas/{idea_id}/join",
@@ -201,40 +258,21 @@ def main() -> None:
         check("helper cannot see the queue", helper.get("/moderation").status_code == 403)
         check("admin user list renders", owner.get("/admin/users").status_code == 200)
 
-        requested = owner.post(f"/ideas/{idea_id}/request-poc", follow_redirects=True)
-        check("POC queued", "POC queued" in requested.text)
-
         headers = {"Authorization": "Bearer smoke-agent-token"}
         check(
             "agent API rejects a bad token",
-            owner.get("/api/agent/queue", headers={"Authorization": "Bearer nope"}).status_code
-            == 403,
+            owner.get("/api/agent/ping", headers={"Authorization": "Bearer nope"}).status_code == 403,
         )
-        jobs = owner.get("/api/agent/queue", headers=headers).json()
-        check("agent sees one queued job", jobs["count"] == 1, str(jobs))
-        job = jobs["jobs"][0]
+        check("agent API rejects a missing token", anon.get("/api/agent/ping").status_code == 401)
+        ping = owner.get("/api/agent/ping", headers=headers).json()
         check(
-            "agent receives the sealed detail it needs to build",
-            "Injection-moulded TPU" in job["sealed_detail"],
+            "agent API answers a valid token as AgentBob",
+            ping["agent"] == "AgentBob (AI)" and ping["user_id"] == "user-agentbob",
+            str(ping),
         )
-
-        updated = owner.post(
-            f"/api/agent/builds/{job['build_id']}",
-            headers=headers,
-            json={
-                "status": "demo_ready",
-                "notes": "Static one-pager built and tested.",
-                "preview_url": "http://10.0.0.5:8410/",
-                "claim": True,
-            },
-        ).json()
-        check("agent reported the demo", updated["status"] == "demo_ready")
-        check("demo private by default", updated["is_public"] is False)
-        check("owner can see their private demo", "Open the demo" in owner.get(idea_url).text)
-        check("public cannot see it yet", "Open the demo" not in anon.get(idea_url).text)
-
-        owner.post(f"/ideas/{idea_id}/demo-visibility", data={"make_public": "1"})
-        check("published demo is public", "Open the demo" in anon.get(idea_url).text)
+        check("the POC request button is gone", "Request a POC" not in owner.get(idea_url).text)
+        check("the old POC route is gone", owner.post(f"/ideas/{idea_id}/request-poc").status_code in {404, 405})
+        check("the old build queue is gone", owner.get("/api/agent/queue", headers=headers).status_code == 404)
 
         second = owner.post(
             "/submit",
@@ -266,6 +304,169 @@ def main() -> None:
         check("feed lists the idea", "Pet guard" in anon.get("/ideas?sort=new").text)
         check("type filter works", "Pet guard" in anon.get("/ideas?type=physical").text)
         check("type filter excludes", "Pet guard" not in anon.get("/ideas?type=digital").text)
+
+        # --- profiles --------------------------------------------------------
+        check("new account is nudged to fill in a profile", "Tell us what you can help with" in helper.get("/").text)
+        saved = helper.post(
+            "/profile/edit",
+            data={
+                "display_name": "Willing Helper",
+                "headline": "Maker of things",
+                "hours_per_week": "6",
+                "goals": ["join", "bogus-goal"],
+                "skills": ["web-dev", "3d-modelling", "not-a-skill"],
+                "other_skills": "Beekeeping",
+                "profile_public": "1",
+            },
+            follow_redirects=True,
+        )
+        check("profile saved", "Profile saved" in saved.text)
+        helper_id = helper.get("/profile").text.split("/u/")[1].split('"')[0]
+        public = anon.get(f"/u/{helper_id}")
+        check("public profile shows skills", "3D modelling" in public.text and "Web development" in public.text)
+        check("unknown skills are dropped", "not-a-skill" not in public.text and "bogus" not in public.text)
+        check("email is not shown on the profile", "helper@example.com" not in public.text)
+        check("banner stops nagging once profiled", "Tell us what you can help with" not in helper.get("/").text)
+        helper.post(
+            "/profile/edit",
+            data={"display_name": "Willing Helper", "skills": ["web-dev"]},
+        )
+        check("a private profile is hidden from visitors", anon.get(f"/u/{helper_id}").status_code == 404)
+        check("a private profile is visible to its owner", helper.get(f"/u/{helper_id}").status_code == 200)
+        check(
+            "skills can be removed",
+            "3D modelling" not in helper.get(f"/u/{helper_id}").text,
+        )
+        bot = anon.get("/u/user-agentbob")
+        check("AgentBob has a public profile marked as a robot", bot.status_code == 200 and "robot" in bot.text)
+        refused = anon.post("/login", data={"email": "agentbob@system.invalid"}, follow_redirects=False)
+        check("AgentBob cannot sign in", "cannot+sign+in" in refused.headers.get("location", ""))
+
+        # --- legal pages -----------------------------------------------------
+        for path, needle in (("/terms", "Terms of use"), ("/privacy", "Privacy policy"), ("/community-rules", "Community rules")):
+            page_text = anon.get(path)
+            check(f"{path} renders", page_text.status_code == 200 and needle in page_text.text)
+            check(f"{path} is marked as a draft", "not legal advice" in page_text.text)
+        check("sign-up links to the terms", "/terms" in anon.get("/login").text)
+        from app.db import SessionLocal  # noqa: E402
+        from app.models import User as UserRow  # noqa: E402
+
+        with SessionLocal() as _db:
+            _owner = _db.query(UserRow).filter_by(email="owner@example.com").one()
+            check(
+                "acceptance of the terms is recorded at sign-up",
+                _owner.terms_version.startswith("draft-") and _owner.terms_accepted_at is not None,
+            )
+        check("footer links to the legal pages", "/privacy" in anon.get("/").text)
+
+        # --- SEO and content pages ------------------------------------------
+        import json as _json
+
+        for path, needle in (
+            ("/about", "About UniteIdeas"),
+            ("/how-it-works", "How UniteIdeas works"),
+            ("/faq", "Questions people ask"),
+            ("/contact", "Contact"),
+            ("/categories", "Browse by category"),
+            ("/unite-ideas", "Unite Ideas"),
+            ("/unite-talent", "Unite Talent"),
+        ):
+            r = anon.get(path)
+            check(f"{path} renders", r.status_code == 200 and needle in r.text)
+        check("home page announces what is coming", "/unite-ideas" in anon.get("/").text and "/unite-talent" in anon.get("/").text)
+        check("robots.txt hides private areas", "Disallow: /admin" in anon.get("/robots.txt").text and "Sitemap:" in anon.get("/robots.txt").text)
+        sm = anon.get("/sitemap.xml")
+        check("sitemap is XML", sm.status_code == 200 and sm.text.startswith("<?xml") and "<urlset" in sm.text)
+        check("sitemap lists published ideas", f"/ideas/{idea_id}" in sm.text)
+        check("sitemap lists static pages", "/how-it-works" in sm.text and "/faq" in sm.text)
+        check("sitemap leaves out private pages", "/admin" not in sm.text and "/profile" not in sm.text and "/login" not in sm.text)
+        check("login page is noindex", 'content="noindex,nofollow"' in anon.get("/login").text)
+        check("admin responses carry X-Robots-Tag", "noindex" in owner.get("/admin").headers.get("x-robots-tag", ""))
+        check("home page is indexable", 'content="index,follow"' in anon.get("/").text)
+        idea_html = anon.get(idea_url).text
+        check("idea page has a canonical link", f'rel="canonical" href="http://testserver/ideas/{idea_id}"' in idea_html)
+        check("idea page uses its summary as description", 'name="description" content="A clip-on guard' in idea_html)
+        ld = re.search(r'<script type="application/ld\+json">(.*?)</script>', idea_html, re.S)
+        check("idea page has structured data", ld is not None and _json.loads(ld.group(1))["@type"] == "CreativeWork")
+        faq_ld = re.search(r'<script type="application/ld\+json">(.*?)</script>', anon.get("/faq").text, re.S)
+        check("faq has FAQPage structured data", faq_ld is not None and _json.loads(faq_ld.group(1))["@type"] == "FAQPage")
+        check("social image is set", "og:image" in idea_html and "og-image.png" in idea_html)
+        check("responses are compressed", anon.get("/", headers={"Accept-Encoding": "gzip"}).headers.get("content-encoding") == "gzip")
+        check("static files are cacheable", "max-age" in anon.get("/static/styles.css").headers.get("cache-control", ""))
+        check("filtered feed is kept out of search results", "noindex,follow" in anon.get("/ideas?type=physical").text)
+        check("category feed gets its own canonical", "ideas?category=pets" in anon.get("/ideas?category=pets").text)
+
+        with SessionLocal() as _db2:
+            owner_row = _db2.query(UserRow).filter_by(email="owner@example.com").one()
+            from app.models import Idea as IdeaRow
+            for n in range(24):
+                _db2.add(IdeaRow(owner_id=owner_row.id, title=f"Bulk idea {n}", summary="bulk summary text", status="published"))
+            _db2.add(IdeaRow(owner_id=owner_row.id, title="Hidden pending idea", summary="held for review ok", status="pending_review"))
+            _db2.commit()
+        page1 = anon.get("/ideas?sort=top")
+        page2 = anon.get("/ideas?page=2")
+        check("feed is paginated", "More ideas" in page1.text and "Page 2 of" in page2.text)
+        check("page two has a canonical and a prev link", "page=2" in page2.text and 'rel="prev"' in page2.text)
+        check("pending ideas are not in the sitemap", "Hidden pending" not in anon.get("/sitemap.xml").text)
+        check("a page past the end shows the last page", anon.get("/ideas?page=99").status_code == 200)
+
+        # --- roles, audit, suspension ----------------------------------------
+        def status(client, path):
+            return client.get(path, follow_redirects=False).status_code
+
+        check("a member cannot open the moderation queue", status(helper, "/moderation") == 403)
+        check("a member cannot open the admin area", status(helper, "/admin") == 403)
+
+        with TestClient(app) as mod:
+            sign_in(mod, "mod@example.com", "Mo Derator")
+            mod_id = mod.get("/profile").text.split("/u/")[1].split('"')[0]
+            check("a new account starts as a plain member", status(mod, "/moderation") == 403)
+            promoted = owner.post(
+                f"/admin/users/{mod_id}/role", data={"role": "moderator"}, follow_redirects=True
+            )
+            check("admin can promote a moderator", "Role updated" in promoted.text)
+            check("moderator can open the queue", status(mod, "/moderation") == 200)
+            check("moderator cannot open the admin home", status(mod, "/admin") == 403)
+            check("moderator cannot list accounts", status(mod, "/admin/users") == 403)
+            check("moderator cannot read the audit log", status(mod, "/admin/audit") == 403)
+            check("moderator cannot change roles", mod.post(f"/admin/users/{mod_id}/role", data={"role": "admin"}).status_code == 403)
+            check("moderator cannot suspend accounts", mod.post(f"/admin/users/{mod_id}/status", data={"action": "suspend", "reason": "x"}).status_code == 403)
+
+            check("sealed text is not shown to staff just by browsing", "Injection-moulded TPU" not in mod.get(idea_url).text)
+            review = mod.get(f"/moderation/ideas/{idea_id}/sealed")
+            check("staff can open the logged sealed review", review.status_code == 200 and "Injection-moulded TPU" in review.text)
+            check("a member cannot use the sealed review", status(helper, f"/moderation/ideas/{idea_id}/sealed") == 403)
+            attachment_id = re.search(r"/files/(file-[0-9a-f]+)", mod.get(idea_url).text).group(1)
+            check("staff can open a private attachment", mod.get(f"/files/{attachment_id}").status_code == 200)
+
+            audit_page = owner.get("/admin/audit").text
+            check("role change is in the audit log", "user.role_change" in audit_page and "user to moderator" in audit_page)
+            check("sealed view is in the audit log", "sealed.viewed" in audit_page)
+            check("attachment view is in the audit log", "attachment.viewed" in audit_page)
+            check("audit log can be filtered", "sealed.viewed" in owner.get("/admin/audit?action=sealed.viewed").text and "user.role_change" not in owner.get("/admin/audit?action=sealed.viewed").text.split("<tbody>")[1])
+
+            check("admin home loads", status(owner, "/admin") == 200)
+            check("timestamp page loads", status(owner, "/admin/timestamps") == 200)
+            check("user search works", "Mo Derator" in owner.get("/admin/users?q=mo+der").text and "Willing Helper" not in owner.get("/admin/users?q=mo+der").text)
+
+            blank = owner.post(f"/admin/users/{mod_id}/status", data={"action": "suspend", "reason": " "}, follow_redirects=True)
+            check("suspension needs a reason", "Give a reason" in blank.text)
+            owner.post(f"/admin/users/{mod_id}/status", data={"action": "suspend", "reason": "Spam in comments"})
+            check("a suspended moderator loses access", status(mod, "/moderation") in {303, 401})
+            link_page = TestClient(app).post("/login", data={"email": "mod@example.com"})
+            relink = html.unescape(LINK_RE.search(link_page.text).group(1)).replace("http://testserver", "")
+            back = TestClient(app).get(relink, follow_redirects=False)
+            check("a suspended account cannot sign back in", "suspended" in back.headers.get("location", ""))
+            check("suspension is in the audit log with its reason", "Spam in comments" in owner.get("/admin/audit").text)
+            owner.post(f"/admin/users/{mod_id}/status", data={"action": "reactivate"})
+            check("a reactivated moderator works again", status(mod, "/moderation") == 200)
+
+        me = owner.get("/profile").text.split("/u/")[1].split('"')[0]
+        own = owner.post(f"/admin/users/{me}/role", data={"role": "user"}, follow_redirects=True)
+        check("an admin cannot demote themselves", "cannot remove your own admin role" in own.text)
+        check("an admin cannot suspend themselves", "cannot suspend yourself" in owner.post(f"/admin/users/{me}/status", data={"action": "suspend", "reason": "x"}, follow_redirects=True).text)
+        bot_role = owner.post("/admin/users/user-agentbob/role", data={"role": "admin"}, follow_redirects=True)
+        check("robot accounts cannot be edited", "Robot accounts cannot be changed" in bot_role.text)
 
     check_base_url_resolution()
     print(f"\n{len(PASSED)} checks passed")

@@ -1,30 +1,71 @@
 {% extends "base.html" %}
-{% block title %}Users — UniteIdeas{% endblock %}
+{% block title %}Members — UniteIdeas admin{% endblock %}
 {% block content %}
 
-<h1>Users</h1>
-<p class="fine">The first account created on a fresh database becomes admin automatically.</p>
+<div class="page-head"><h1>Members</h1><a href="/admin">Admin home</a></div>
 
+<form class="filters" method="get" action="/admin/users">
+  <label>Search
+    <input type="text" name="q" value="{{ q }}" placeholder="Name or email" />
+  </label>
+  <label>Role
+    <select name="role">
+      <option value="">All</option>
+      {% for r in roles + ['bot'] %}<option value="{{ r }}" {% if role_filter == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn small">Filter</button>
+</form>
+<p class="fine">{{ total }} account{{ '' if total == 1 else 's' }}. The first real sign-up on a new database becomes admin.
+  Moderators can review content but cannot see this page.</p>
+
+<div class="table-wrap">
 <table class="table">
-  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
   <tbody>
   {% for u in users %}
   <tr>
-    <td>{{ u.display_name }}</td>
-    <td class="fine">{{ u.email }}</td>
+    <td><a href="/u/{{ u.id }}">{{ u.display_name }}</a></td>
+    <td class="fine">{{ '—' if u.is_bot else u.email }}</td>
     <td>{{ u.role }}</td>
+    <td>{% if u.is_active %}active{% else %}<span class="chip chip-bad">suspended</span>{% endif %}</td>
     <td class="fine">{{ u.created_at.strftime('%d %b %Y') }}</td>
     <td>
+      {% if u.is_bot %}
+        <span class="fine">robot account</span>
+      {% else %}
       <form method="post" action="/admin/users/{{ u.id }}/role" class="inline">
-        <select name="role">
+        <select name="role" aria-label="Role for {{ u.display_name }}">
           {% for r in roles %}<option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
         </select>
         <button class="btn small ghost">Set</button>
       </form>
+      {% if u.id != user.id %}
+      <form method="post" action="/admin/users/{{ u.id }}/status" class="inline">
+        {% if u.is_active %}
+        <input type="hidden" name="action" value="suspend" />
+        <input type="text" name="reason" placeholder="Reason (required)" aria-label="Reason" class="reason" />
+        <button class="btn small danger">Suspend</button>
+        {% else %}
+        <input type="hidden" name="action" value="reactivate" />
+        <button class="btn small ghost">Reactivate</button>
+        {% endif %}
+      </form>
+      {% endif %}
+      {% endif %}
     </td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
+
+{% if pages > 1 %}
+<p class="row">
+  {% if page > 1 %}<a href="/admin/users?page={{ page - 1 }}&q={{ q|urlencode }}&role={{ role_filter }}">Previous</a>{% endif %}
+  <span class="fine">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a href="/admin/users?page={{ page + 1 }}&q={{ q|urlencode }}&role={{ role_filter }}">Next</a>{% endif %}
+</p>
+{% endif %}
 
 {% endblock %}

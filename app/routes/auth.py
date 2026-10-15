@@ -10,9 +10,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import mailer
-from app.config import base_url_for, get_settings
+from app.config import LEGAL_VERSION, base_url_for, get_settings
 from app.db import get_db
-from app.models import ROLE_ADMIN, ROLE_USER, User
+from app.models import ROLE_ADMIN, ROLE_BOT, ROLE_USER, User, utc_now
+from app.system_users import is_system_email
 from app.security import (
     SESSION_COOKIE,
     consume_login_token,
@@ -43,6 +44,9 @@ def login_request(
     clean_email = email.strip().lower()
     if "@" not in clean_email or len(clean_email) < 5:
         return RedirectResponse("/login?err=Enter+a+valid+email+address", status_code=303)
+
+    if is_system_email(clean_email):
+        return RedirectResponse("/login?err=That+address+cannot+sign+in", status_code=303)
 
     token = create_login_token(db, clean_email)
     link = f"{base_url_for(request)}/auth/verify?token={quote(token)}"
@@ -78,16 +82,25 @@ def verify(
 
     user = db.scalar(select(User).where(User.email == email))
     if user is None:
-        is_first = db.scalar(select(func.count(User.id))) == 0
+        is_first = (
+            db.scalar(select(func.count(User.id)).where(User.role != ROLE_BOT)) == 0
+        )
         user = User(
             email=email,
             display_name=(display_name.strip() or email.split("@")[0])[:80],
             role=ROLE_ADMIN if is_first else ROLE_USER,
+            terms_version=LEGAL_VERSION,
+            terms_accepted_at=utc_now(),
         )
         db.add(user)
         db.commit()
 
-    target = "/" if user.onboarding_done else "/onboarding"
+    if not user.is_active:
+        return RedirectResponse("/login?err=This+account+is+suspended", status_code=303)
+    if not user.profile_done:
+        target = "/profile/edit?welcome=1"
+    else:
+        target = "/" if user.onboarding_done else "/onboarding"
     response = RedirectResponse(target, status_code=303)
     response.set_cookie(
         SESSION_COOKIE,

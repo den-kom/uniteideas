@@ -21,6 +21,10 @@ ALLOWED_UPLOAD_TYPES = {
 }
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
+# Bump when the terms or privacy policy change in a way members must accept again.
+LEGAL_VERSION = "draft-2026-10-16"
+LEGAL_UPDATED = "16 October 2026"
+
 
 def _flag(name: str, default: str = "false") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes"}
@@ -53,6 +57,7 @@ class Settings:
     magic_link_ttl_minutes: int
     max_pledge_hours_per_week: int
     soft_pledge_hours_per_week: int
+    contact_email: str
 
     @property
     def agent_api_configured(self) -> bool:
@@ -77,6 +82,7 @@ def get_settings() -> Settings:
         magic_link_ttl_minutes=int(os.getenv("MAGIC_LINK_TTL_MINUTES", "30")),
         max_pledge_hours_per_week=int(os.getenv("MAX_PLEDGE_HOURS_PER_WEEK", "40")),
         soft_pledge_hours_per_week=int(os.getenv("SOFT_PLEDGE_HOURS_PER_WEEK", "20")),
+        contact_email=os.getenv("CONTACT_EMAIL", "contact@uniteideas.org"),
     )
 
 

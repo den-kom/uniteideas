@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,11 +12,8 @@ from app.config import ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES, get_settings
 from app.db import get_db
 from app.models import (
     Attachment,
-    BUILD_DEMO_READY,
-    BUILD_QUEUED,
     Idea,
     IdeaProof,
-    PocBuild,
     STATUS_PENDING,
     STATUS_PUBLISHED,
     TeamMember,
@@ -25,8 +22,11 @@ from app.models import (
     short_id,
     utc_now,
 )
-from app.proof import build_receipt, compute_content_hash, sha256_bytes, sha256_text
+from app.proof import build_receipt, sign_receipt, compute_content_hash, sha256_bytes, sha256_text
+from app import audit, timestamping
+from app.permissions import can
 from app.sealing import seal, unseal
+from app.verification import canonical_for
 from app.security import current_user, require_user
 from app.templating import render
 
@@ -144,13 +144,13 @@ async def submit_idea(
         published_at=utc_now() if status == STATUS_PUBLISHED else None,
     )
     db.add(idea)
-    db.add(
-        IdeaProof(
-            idea_id=idea_id,
-            content_hash=content_hash,
-            author_email_hash=sha256_text(user.email.lower()),
-        )
+    proof = IdeaProof(
+        idea_id=idea_id,
+        content_hash=content_hash,
+        author_email_hash=sha256_text(user.email.lower()),
     )
+    timestamping.queue_for_timestamp(proof)
+    db.add(proof)
     for name, path_str, ctype, size, digest in stored_files:
         db.add(
             Attachment(
@@ -171,28 +171,61 @@ async def submit_idea(
     return RedirectResponse(f"/ideas/{idea_id}?msg={note}", status_code=303)
 
 
+def _safe_next(value: str, fallback: str) -> str:
+    """Only allow redirects to a path on this site."""
+    if value.startswith("/") and not value.startswith("//") and "\\" not in value:
+        return value
+    return fallback
+
+
 @router.post("/ideas/{idea_id}/vote")
 def vote(
+    request: Request,
     idea_id: str,
+    next: str = Form(default=""),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """Back an idea, or take your backing away if you already gave it."""
+    wants_json = "application/json" in (request.headers.get("accept") or "")
     idea = db.get(Idea, idea_id)
     if idea is None or idea.status != "published":
+        if wants_json:
+            return JSONResponse({"error": "not found"}, status_code=404)
         return RedirectResponse("/ideas?err=Idea+not+found", status_code=303)
-    db.add(Vote(idea_id=idea_id, user_id=user.id))
+
+    existing = db.scalar(
+        select(Vote).where(Vote.idea_id == idea_id, Vote.user_id == user.id)
+    )
+    if existing is not None:
+        db.delete(existing)
+        backed = False
+        note = "Backing+removed"
+    else:
+        db.add(Vote(idea_id=idea_id, user_id=user.id))
+        backed = True
+        note = "Thanks+for+backing+this+idea"
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        return RedirectResponse(
-            f"/ideas/{idea_id}?err=You+have+already+backed+this+idea", status_code=303
-        )
-    idea.score = (idea.score or 0) + 1
+        backed = True
+        note = "You+already+back+this+idea"
+    # The count is derived from the votes themselves, so it cannot drift.
+    idea.score = db.scalar(select(func.count(Vote.id)).where(Vote.idea_id == idea_id)) or 0
     idea.updated_at = utc_now()
     db.add(idea)
     db.commit()
-    return RedirectResponse(f"/ideas/{idea_id}?msg=Thanks+for+backing+this+idea", status_code=303)
+
+    if wants_json:
+        return JSONResponse({"score": idea.score, "backed": backed})
+    target = _safe_next(next, f"/ideas/{idea_id}").split("#")[0]
+    path, _, query = target.partition("?")
+    kept = [
+        pair for pair in query.split("&") if pair and pair.split("=")[0] not in {"msg", "err"}
+    ]
+    kept.append(f"msg={note}")
+    return RedirectResponse(f"{path}?{'&'.join(kept)}#idea-{idea_id}", status_code=303)
 
 
 @router.post("/ideas/{idea_id}/reveal")
@@ -241,58 +274,73 @@ def proof_bundle(idea_id: str, db: Session = Depends(get_db)):
         anchor_reference=idea.proof.anchor_reference,
         verify_url=f"{settings.public_base_url}/verify",
     )
+    anchor = {
+        "provider": idea.proof.anchor_provider,
+        "status": idea.proof.anchor_status,
+        "reference": idea.proof.anchor_reference,
+        "confirmed_at_utc": idea.proof.anchored_at.replace(microsecond=0).isoformat()
+        if idea.proof.anchored_at
+        else None,
+        "opentimestamps_file_base64": idea.proof.anchor_proof or None,
+        "how_to_check": (
+            "Save canonical_payload to a file exactly as written, then run "
+            "`ots verify <file>.ots <file>` with the OpenTimestamps client."
+        ),
+    }
     return JSONResponse(
-        {"receipt": receipt, "canonical_payload": canonical},
+        {
+            "receipt": receipt,
+            "receipt_signature": sign_receipt(receipt, settings.secret_key),
+            "canonical_payload": canonical,
+            "public_timestamp": anchor,
+        },
         headers={
             "Content-Disposition": f'attachment; filename="{idea.id}-proof-bundle.json"'
         },
     )
 
 
-@router.post("/ideas/{idea_id}/request-poc")
-def request_poc(
+def _proof_visible(idea: Idea | None, user: User | None) -> bool:
+    if idea is None or idea.proof is None:
+        return False
+    if idea.status == "published":
+        return True
+    return bool(user and (user.is_staff or user.id == idea.owner_id))
+
+
+@router.get("/ideas/{idea_id}/proof.ots")
+def proof_ots(
     idea_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_user),
+    user: User | None = Depends(current_user),
 ):
+    """The OpenTimestamps file for this idea's fingerprint."""
     idea = db.get(Idea, idea_id)
-    if idea is None or idea.owner_id != user.id:
-        return RedirectResponse("/profile?err=Not+your+idea", status_code=303)
-    active = [
-        b
-        for b in idea.builds
-        if b.status not in {BUILD_DEMO_READY, "failed", "escalated"}
-    ]
-    if active:
-        return RedirectResponse(
-            f"/ideas/{idea_id}?err=A+POC+job+is+already+in+the+queue", status_code=303
-        )
-    db.add(PocBuild(idea_id=idea_id, status=BUILD_QUEUED))
-    db.commit()
-    return RedirectResponse(
-        f"/ideas/{idea_id}?msg=POC+queued+for+the+Agent+System", status_code=303
+    if not _proof_visible(idea, user) or not idea.proof.anchor_proof:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return Response(
+        timestamping.decode(idea.proof.anchor_proof),
+        media_type="application/vnd.opentimestamps.v1",
+        headers={"Content-Disposition": f'attachment; filename="{idea.id}.json.ots"'},
     )
 
 
-@router.post("/ideas/{idea_id}/demo-visibility")
-def demo_visibility(
+@router.get("/ideas/{idea_id}/canonical.json")
+def canonical_json(
     idea_id: str,
-    make_public: str = Form(default="1"),
     db: Session = Depends(get_db),
-    user: User = Depends(require_user),
+    user: User | None = Depends(current_user),
 ):
+    """The exact bytes whose SHA-256 is the fingerprint, for checking the .ots file."""
     idea = db.get(Idea, idea_id)
-    if idea is None or idea.owner_id != user.id:
-        return RedirectResponse("/profile?err=Not+your+idea", status_code=303)
-    build = idea.latest_build
-    if build is None:
-        return RedirectResponse(f"/ideas/{idea_id}?err=No+demo+yet", status_code=303)
-    build.is_public = make_public == "1"
-    build.updated_at = utc_now()
-    db.add(build)
-    db.commit()
-    state = "public" if build.is_public else "private"
-    return RedirectResponse(f"/ideas/{idea_id}?msg=Demo+is+now+{state}", status_code=303)
+    if not _proof_visible(idea, user):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    _, canonical = canonical_for(idea)
+    return Response(
+        canonical.encode("utf-8"),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{idea.id}.json"'},
+    )
 
 
 @router.get("/files/{attachment_id}")
@@ -311,7 +359,6 @@ def download_attachment(
     if not allowed and user is not None:
         allowed = (
             user.id == idea.owner_id
-            or user.is_staff
             or db.scalar(
                 select(TeamMember).where(
                     TeamMember.idea_id == idea.id, TeamMember.user_id == user.id
@@ -319,6 +366,11 @@ def download_attachment(
             )
             is not None
         )
+        if not allowed and can(user, "sealed.review"):
+            # Staff may open a private attachment to judge it, and it is always recorded.
+            audit.record(db, user, "attachment.viewed", "attachment", att.id, att.filename)
+            db.commit()
+            allowed = True
     if not allowed:
         return JSONResponse({"error": "forbidden"}, status_code=403)
     return FileResponse(att.stored_path, media_type=att.content_type, filename=att.filename)

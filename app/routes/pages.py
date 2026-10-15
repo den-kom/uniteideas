@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -14,14 +16,16 @@ from app.models import (
     Idea,
     IdeaProof,
     JoinRequest,
-    PROGRESS_STAGES,
     TeamMember,
     User,
     Vote,
 )
-from app.proof import sha256_text
+from app.config import get_settings
+from app.proof import check_receipt_signature, sha256_text
 from app.sealing import unseal
 from app.security import current_user, require_user
+from app.seo import absolute, idea_schema
+from app.verification import Check, Verification, find_proof, verify
 from app.templating import render
 
 router = APIRouter()
@@ -31,6 +35,19 @@ def _published(stmt):
     return stmt.where(Idea.status == "published")
 
 
+def _backed_ids(db: Session, user: User | None, ideas) -> set[str]:
+    """Which of these ideas the signed-in user already backs."""
+    if user is None or not ideas:
+        return set()
+    return set(
+        db.scalars(
+            select(Vote.idea_id).where(
+                Vote.user_id == user.id, Vote.idea_id.in_([i.id for i in ideas])
+            )
+        ).all()
+    )
+
+
 @router.get("/")
 def home(
     request: Request,
@@ -38,12 +55,18 @@ def home(
     user: User | None = Depends(current_user),
 ):
     top = db.scalars(
-        _published(select(Idea)).order_by(desc(Idea.score), desc(Idea.created_at)).limit(6)
+        _published(select(Idea)).order_by(desc(Idea.score), desc(Idea.created_at)).limit(4)
     ).all()
     recent = db.scalars(
-        _published(select(Idea)).order_by(desc(Idea.created_at)).limit(6)
+        _published(select(Idea)).order_by(desc(Idea.created_at)).limit(4)
     ).all()
-    return render(request, "index.html", {"top": top, "recent": recent}, user=user)
+    backed = _backed_ids(db, user, list(top) + list(recent))
+    return render(
+        request, "index.html", {"top": top, "recent": recent, "backed": backed}, user=user
+    )
+
+
+PAGE_SIZE = 20
 
 
 @router.get("/ideas")
@@ -52,6 +75,7 @@ def feed(
     type: str = "all",
     category: str = "",
     sort: str = "top",
+    page: int = 1,
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ):
@@ -65,10 +89,22 @@ def feed(
         if sort == "new"
         else stmt.order_by(desc(Idea.score), desc(Idea.created_at))
     )
-    ideas = db.scalars(stmt.limit(100)).all()
+    total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    pages = max(1, -(-total // PAGE_SIZE))
+    page = max(1, min(page, pages))
+    ideas = db.scalars(stmt.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)).all()
     categories = sorted(
         {c for c in db.scalars(_published(select(Idea.category))).all() if c}
     )
+
+    # Search engines: list the plain feed and each category once; keep other views out of results.
+    cat = category.strip().lower()
+    base = "/ideas" + (f"?category={quote(cat)}" if cat else "")
+    joiner = "&" if "?" in base else "?"
+    canonical = absolute(base + (f"{joiner}page={page}" if page > 1 else ""))
+    robots = "noindex,follow" if (type != "all" or sort != "top") else None
+    title = f"{cat.title()} ideas — UniteIdeas" if cat else "Browse ideas — UniteIdeas"
+
     return render(
         request,
         "feed.html",
@@ -78,6 +114,15 @@ def feed(
             "filter_category": category,
             "sort": sort,
             "categories": categories,
+            "backed": _backed_ids(db, user, ideas),
+            "page": page,
+            "pages": pages,
+            "canonical_url": canonical,
+            "robots": robots,
+            "page_title": title,
+            "page_base": base,
+            "prev_url": absolute(base + (f"{joiner}page={page - 1}" if page > 2 else "")) if page > 1 else None,
+            "next_url": absolute(base + f"{joiner}page={page + 1}") if page < pages else None,
         },
         user=user,
     )
@@ -113,9 +158,8 @@ def idea_detail(
             )
         )
 
-    can_see_sealed = idea.sealed_is_public or is_owner or bool(member) or bool(
-        user and user.is_staff
-    )
+    # Staff do not get sealed text just by browsing. They use the logged review page.
+    can_see_sealed = idea.sealed_is_public or is_owner or bool(member)
     sealed_text = unseal(idea.sealed_blob) if (can_see_sealed and idea.sealed_blob) else ""
 
     pending_joins = []
@@ -140,8 +184,6 @@ def idea_detail(
         m.user_id: db.get(User, m.user_id) for m in members
     }
     join_users = {j.user_id: db.get(User, j.user_id) for j in pending_joins}
-    build = idea.latest_build
-    show_demo = bool(build and build.preview_url and (build.is_public or is_owner))
 
     return render(
         request,
@@ -159,96 +201,98 @@ def idea_detail(
             "members": members,
             "member_users": member_users,
             "has_voted": has_voted,
-            "stages": PROGRESS_STAGES,
-            "build": build,
-            "show_demo": show_demo,
+            "idea_jsonld": idea_schema(idea, idea.owner.display_name),
         },
         user=user,
     )
 
 
 @router.get("/verify")
-def verify_form(request: Request, user: User | None = Depends(current_user)):
-    return render(request, "verify.html", {"result": None}, user=user)
+def verify_form(
+    request: Request,
+    q: str = "",
+    db: Session = Depends(get_db),
+    user: User | None = Depends(current_user),
+):
+    """Look up an idea's proof by its link, id or fingerprint."""
+    if not q.strip():
+        return render(request, "verify.html", {"q": "", "verification": None}, user=user)
+    proof = find_proof(db, q)
+    if proof is None:
+        return render(
+            request,
+            "verify.html",
+            {"q": q, "verification": None, "not_found": True},
+            user=user,
+        )
+    return render(
+        request, "verify.html", {"q": q, "verification": verify(db, proof)}, user=user
+    )
 
 
 @router.post("/verify")
 async def verify_bundle(
     request: Request,
     bundle: UploadFile | None = File(default=None),
-    content_hash: str = Form(default=""),
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ):
-    result: dict = {"checks": [], "ok": False}
-
-    if bundle is not None and bundle.filename:
-        raw = await bundle.read()
-        try:
-            parsed = json.loads(raw.decode("utf-8"))
-            receipt = parsed["receipt"]
-            canonical = parsed["canonical_payload"]
-        except (json.JSONDecodeError, KeyError, UnicodeDecodeError):
-            result["checks"].append(("Bundle readable", False, "Not a valid proof bundle"))
-            return render(request, "verify.html", {"result": result}, user=user)
-
-        recomputed = sha256_text(canonical)
-        claimed = receipt.get("content_hash", "")
-        result["checks"].append(
-            (
-                "Content matches its hash",
-                recomputed == claimed,
-                f"recomputed {recomputed[:16]}… vs claimed {claimed[:16]}…",
-            )
+    """Advanced: check a proof bundle that someone downloaded earlier."""
+    if bundle is None or not bundle.filename:
+        return RedirectResponse("/verify?err=Choose+a+proof+bundle+to+check", status_code=303)
+    raw = await bundle.read()
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+        receipt = parsed["receipt"]
+        canonical = parsed["canonical_payload"]
+        claimed = receipt["content_hash"]
+        idea_id = receipt.get("idea_id", "")
+    except (json.JSONDecodeError, KeyError, UnicodeDecodeError, TypeError):
+        return render(
+            request,
+            "verify.html",
+            {
+                "q": "",
+                "verification": Verification(
+                    ok=False,
+                    checks=[Check("Bundle is readable", "fail", "This is not a valid proof bundle.")],
+                ),
+            },
+            user=user,
         )
 
-        stored = db.scalar(
-            select(IdeaProof).where(IdeaProof.idea_id == receipt.get("idea_id", ""))
+    recomputed = sha256_text(canonical)
+    checks = [
+        Check(
+            "Content matches its fingerprint",
+            "pass" if recomputed == claimed else "fail",
+            f"recomputed {recomputed[:16]}… and the bundle claims {claimed[:16]}…",
         )
-        result["checks"].append(
-            (
-                "Registered on UniteIdeas",
-                stored is not None and stored.content_hash == claimed,
-                f"idea {receipt.get('idea_id')}"
-                if stored
-                else "no matching record on this instance",
+    ]
+    if "receipt_signature" in parsed:
+        sig_ok = check_receipt_signature(receipt, parsed["receipt_signature"], get_settings().secret_key)
+        checks.append(
+            Check(
+                "UniteIdeas signature on the receipt",
+                "pass" if sig_ok else "fail",
+                "Issued by this site at submission and not altered."
+                if sig_ok
+                else "The receipt was changed or was not issued by this site.",
             )
         )
-        if stored is not None:
-            result["checks"].append(
-                (
-                    "Timestamp on record",
-                    True,
-                    stored.created_at.replace(microsecond=0).isoformat() + " UTC",
-                )
-            )
-        result["receipt"] = receipt
-        result["ok"] = all(ok for _, ok, _ in result["checks"])
-        return render(request, "verify.html", {"result": result}, user=user)
-
-    if content_hash.strip():
-        stored = db.scalar(
-            select(IdeaProof).where(IdeaProof.content_hash == content_hash.strip().lower())
-        )
-        result["checks"].append(
-            (
-                "Hash found in registry",
-                stored is not None,
-                f"idea {stored.idea_id}" if stored else "no match",
-            )
-        )
-        if stored is not None:
-            result["checks"].append(
-                (
-                    "Timestamp on record",
-                    True,
-                    stored.created_at.replace(microsecond=0).isoformat() + " UTC",
-                )
-            )
-        result["ok"] = stored is not None
-        return render(request, "verify.html", {"result": result}, user=user)
-
-    return RedirectResponse("/verify?err=Upload+a+bundle+or+paste+a+hash", status_code=303)
+    stored = db.scalar(select(IdeaProof).where(IdeaProof.idea_id == idea_id))
+    if stored is not None and stored.content_hash == claimed:
+        result = verify(db, stored)
+        result.checks = checks + result.checks
+        result.ok = result.ok and all(c.state == "pass" for c in checks)
+        return render(request, "verify.html", {"q": "", "verification": result}, user=user)
+    checks.append(Check("Registered on UniteIdeas", "fail", "No matching record on this site."))
+    return render(
+        request,
+        "verify.html",
+        {"q": "", "verification": Verification(ok=False, checks=checks)},
+        user=user,
+    )
 
 
 @router.get("/profile")
@@ -268,7 +312,7 @@ def profile(
     ).all()
     join_ideas = {j.idea_id: db.get(Idea, j.idea_id) for j in my_joins}
     member_ideas = {m.idea_id: db.get(Idea, m.idea_id) for m in my_memberships}
-    pledged = sum(m.pledged_hours_per_day for m in my_memberships)
+    pledged = sum(m.pledged_hours_per_week for m in my_memberships)
     return render(
         request,
         "profile.html",

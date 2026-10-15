@@ -1,8 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Browse ideas — UniteIdeas{% endblock %}
+{% from "_ideas.html" import idea_card with context %}
+{% block title %}{{ page_title }}{% if page > 1 %} (page {{ page }}){% endif %}{% endblock %}
+{% block meta_description %}Browse {{ filter_category ~ ' ' if filter_category }}ideas shared on UniteIdeas. Back the ones you like, join a team, and help build them.{% endblock %}
+{% block jsonld %}
+{% if prev_url %}<link rel="prev" href="{{ prev_url }}" />{% endif %}
+{% if next_url %}<link rel="next" href="{{ next_url }}" />{% endif %}
+{% endblock %}
 {% block content %}
 
-<h1>Ideas</h1>
+<div class="page-head">
+  <h1>Ideas</h1>
+  <a class="btn" href="{{ '/submit' if user else '/login' }}">Share an idea</a>
+</div>
 
 <form class="filters" method="get" action="/ideas">
   <label>Type
@@ -29,21 +38,22 @@
 
 <div class="idea-list">
   {% for idea in ideas %}
-  <article class="idea-card">
-    <div class="score">{{ idea.score }}</div>
-    <div class="body">
-      <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
-      <p class="meta">
-        {{ idea.idea_type }} &middot; {{ idea.category }} &middot;
-        stage: {{ idea.stage|replace('_', ' ') }}
-        {% if idea.has_sealed_detail and not idea.sealed_is_public %}&middot; <span class="pill">sealed detail</span>{% endif %}
-      </p>
-      <p>{{ idea.summary }}</p>
-    </div>
-  </article>
+    {{ idea_card(idea, idea.id in backed, request.url.path ~ ('?' ~ request.url.query if request.url.query else '')) }}
   {% else %}
-  <p class="empty">No ideas match those filters yet.</p>
+  <div class="empty-block">
+    <p>No ideas match those filters yet.</p>
+    <p><a href="/ideas">Clear filters</a> or <a href="{{ '/submit' if user else '/login' }}">share the first one</a>.</p>
+  </div>
   {% endfor %}
 </div>
+
+{% if pages > 1 %}
+{% set sep = '&' if '?' in page_base else '?' %}
+<nav class="pager" aria-label="Pages">
+  {% if page > 1 %}<a href="{{ page_base }}{{ sep ~ 'page=' ~ (page - 1) if page > 2 else '' }}">Newer ideas</a>{% endif %}
+  <span class="fine">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a href="{{ page_base }}{{ sep }}page={{ page + 1 }}">More ideas</a>{% endif %}
+</nav>
+{% endif %}
 
 {% endblock %}

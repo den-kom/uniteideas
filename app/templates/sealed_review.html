@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sealed detail review — UniteIdeas{% endblock %}
+{% block content %}
+<h1>Sealed detail</h1>
+<p class="flash bad">This view is recorded in the audit log under your name. Do not copy or share what you read here.</p>
+<h2><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h2>
+{% if sealed_text %}
+<div class="onepager"><div class="prose">{{ sealed_text }}</div></div>
+{% else %}
+<p class="hint">This idea has no sealed detail.</p>
+{% endif %}
+{% if idea.attachments %}
+<h2>Attachments</h2>
+<ul>{% for a in idea.attachments %}<li><a href="/files/{{ a.id }}">{{ a.filename }}</a> <span class="fine">(opening it is logged too)</span></li>{% endfor %}</ul>
+{% endif %}
+<p><a href="/moderation">Back to the queue</a></p>
+{% endblock %}

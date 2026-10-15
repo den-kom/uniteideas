@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_ideas.html" import idea_card with context %}
+{% block title %}{{ member.display_name }} — UniteIdeas{% endblock %}
+{% block meta_description %}{{ member.headline or (member.display_name ~ ' on UniteIdeas') }}{% endblock %}
+{% block content %}
+
+<header class="member-head">
+  <div class="avatar" aria-hidden="true">{{ member.display_name[:1]|upper }}</div>
+  <div>
+    <h1>{{ member.display_name }}{% if member.is_bot %} <span class="chip chip-bot">robot</span>{% endif %}</h1>
+    {% if member.headline %}<p class="lede">{{ member.headline }}</p>{% endif %}
+    <p class="meta">
+      {% if member.location %}{{ member.location }} &middot; {% endif %}
+      Member since {{ member.created_at.strftime('%b %Y') }}
+      {% if member.hours_per_week %}&middot; up to {{ member.hours_per_week }}h a week for projects{% endif %}
+    </p>
+    {% if is_self %}<p><a class="btn small ghost" href="/profile/edit">Edit profile</a></p>{% endif %}
+  </div>
+</header>
+
+{% if member.bio %}<section><div class="prose">{{ member.bio }}</div></section>{% endif %}
+
+{% if member.goal_slugs %}
+<section>
+  <h2>Here to</h2>
+  <ul class="plain-list">{% for g in member.goal_slugs %}<li>{{ goals[g] }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+{% if member.skill_slugs or member.other_skills %}
+<section>
+  <h2>Can help with</h2>
+  <p class="chips">
+    {% for s in member.skill_slugs %}<span class="chip">{{ skill_labels.get(s, s) }}</span>{% endfor %}
+    {% if member.other_skills %}<span class="chip chip-plain">{{ member.other_skills }}</span>{% endif %}
+  </p>
+</section>
+{% endif %}
+
+<section>
+  <h2>Ideas</h2>
+  {% if ideas %}
+  <div class="idea-list">
+    {% for idea in ideas %}{{ idea_card(idea, False, "/u/" ~ member.id) }}{% endfor %}
+  </div>
+  {% else %}
+  <p class="hint">No published ideas yet.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

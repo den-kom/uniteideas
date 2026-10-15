@@ -1,23 +1,40 @@
 {% extends "base.html" %}
-{% block title %}UniteIdeas — share an idea, keep the proof, find a team{% endblock %}
+{% from "_ideas.html" import idea_card with context %}
+{% block title %}UniteIdeas — put your idea on the record{% endblock %}
+{% block meta_description %}Share a one-page summary of your idea, keep the details sealed, and get a timestamped receipt. Then find people who want to help build it.{% endblock %}
+
+{% block jsonld %}{{ jsonld(site_jsonld()) }}{% endblock %}
 
 {% block content %}
 
+{# Hero copy lives here so the slogan is a one-line change. Alternatives are listed in docs/REBUILD_PROGRESS.md. #}
 <section class="hero">
-  <p class="eyebrow">A community for people with ideas</p>
-  <h1>Stop sitting on your ideas</h1>
-  <p class="lede">
-    Bring them <a href="/submit">here</a>. Get a verification <a href="/verify">badge</a>. Bring these <a href="/ideas">ideas</a> to life.
-  </p>
-  <div class="hero-actions">
-    {% if user %}
-      <a class="btn" href="/submit">Share an idea</a>
-    {% else %}
-      <a class="btn" href="/login">Join the Community</a>
-    {% endif %}
-    <a class="btn ghost" href="/verify">Verify Idea</a>
-    <a class="btn ghost" href="/ideas">Browse Ideas</a>
+  <div class="hero-copy">
+    <h1>Put your idea on the record.</h1>
+    <p class="lede">
+      Share a one-page summary, keep the full details sealed, and get a timestamped
+      receipt. Then find people who want to help you build it.
+    </p>
+    <div class="hero-actions">
+      <a class="btn" href="{{ '/submit' if user else '/login' }}">Share an idea</a>
+      <a class="btn ghost" href="/ideas">Browse ideas</a>
+    </div>
+    <p class="hero-note"><a href="/verify">Already have a receipt? Verify it.</a></p>
   </div>
+
+  <figure class="receipt" aria-label="Example of a proof receipt">
+    <div class="receipt-head">
+      <span class="receipt-stamp">Timestamped</span>
+      <span class="receipt-time">12 Mar 2026 · 09:41 UTC</span>
+    </div>
+    <p class="receipt-title">Clip-on guard for pets' tails and chair wheels</p>
+    <dl class="receipt-rows">
+      <dt>Public summary</dt><dd>Shared</dd>
+      <dt>Full details</dt><dd>Sealed</dd>
+      <dt>Fingerprint</dt><dd class="mono">9f2c4a7e…b81d03</dd>
+    </dl>
+    <figcaption>Example receipt. Yours is a file you can keep and anyone can check.</figcaption>
+  </figure>
 </section>
 
 <section class="how" aria-labelledby="how-heading">
@@ -52,19 +69,29 @@
   </ol>
 </section>
 
+<section class="soon" aria-labelledby="soon-heading">
+  <h2 id="soon-heading">Coming soon</h2>
+  <div class="grid-3 soon-grid">
+    <a class="soon-card" href="/unite-ideas">
+      <h3>Unite Ideas</h3>
+      <p>Finds ideas that overlap and suggests combining them, or spinning off your own version.</p>
+    </a>
+    <a class="soon-card" href="/unite-talent">
+      <h3>Unite Talent</h3>
+      <p>Suggests teammates whose skills fit your idea.</p>
+    </a>
+  </div>
+</section>
+
 {% if top %}
 <section>
-  <h2>Most backed</h2>
+  <div class="section-head">
+    <h2>Most backed</h2>
+    <a href="/ideas?sort=top">See all</a>
+  </div>
   <div class="idea-list">
     {% for idea in top %}
-    <article class="idea-card">
-      <div class="score">{{ idea.score }}</div>
-      <div class="body">
-        <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
-        <p class="meta">{{ idea.idea_type }} &middot; {{ idea.category }} &middot; {{ idea.stage|replace('_', ' ') }}</p>
-        <p>{{ idea.summary }}</p>
-      </div>
-    </article>
+      {{ idea_card(idea, idea.id in backed, "/") }}
     {% endfor %}
   </div>
 </section>
@@ -72,26 +99,22 @@
 
 {% if recent %}
 <section>
-  <h2>Newest</h2>
+  <div class="section-head">
+    <h2>Newest</h2>
+    <a href="/ideas?sort=new">See all</a>
+  </div>
   <div class="idea-list">
     {% for idea in recent %}
-    <article class="idea-card">
-      <div class="score">{{ idea.score }}</div>
-      <div class="body">
-        <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
-        <p class="meta">{{ idea.idea_type }} &middot; {{ idea.category }}</p>
-        <p>{{ idea.summary }}</p>
-      </div>
-    </article>
+      {{ idea_card(idea, idea.id in backed, "/") }}
     {% endfor %}
   </div>
 </section>
 {% endif %}
 
 {% if not top and not recent %}
-<section class="empty-state">
-  <h2>No ideas yet — the community starts with one</h2>
-  <p>Be the first. {% if user %}<a href="/submit">Share an idea</a>{% else %}<a href="/login">Join in</a> to share one{% endif %}.</p>
+<section class="empty-block">
+  <h2>No ideas yet</h2>
+  <p>The community starts with one. <a href="{{ '/submit' if user else '/login' }}">Share yours.</a></p>
 </section>
 {% endif %}
 

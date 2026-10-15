@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Idea categories — UniteIdeas{% endblock %}
+{% block meta_description %}Browse ideas by category: home, health, pets, productivity, education, sustainability and more.{% endblock %}
+{% block content %}
+<h1>Browse by category</h1>
+{% if rows %}
+<ul class="category-list">
+  {% for name, count in rows %}
+  <li><a href="/ideas?category={{ name|urlencode }}"><span>{{ name }}</span> <span class="fine">{{ count }} idea{{ '' if count == 1 else 's' }}</span></a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty-block"><p>No ideas yet. <a href="{{ '/submit' if user else '/login' }}">Share the first one.</a></p></div>
+{% endif %}
+{% endblock %}
