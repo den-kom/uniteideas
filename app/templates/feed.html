@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% from "_ideas.html" import idea_card with context %}
-{% block title %}Browse ideas — UniteIdeas{% endblock %}
-{% block meta_description %}Browse ideas shared on UniteIdeas. Back the ones you like, join a team, and help build them.{% endblock %}
+{% block title %}{{ page_title }}{% if page > 1 %} (page {{ page }}){% endif %}{% endblock %}
+{% block meta_description %}Browse {{ filter_category ~ ' ' if filter_category }}ideas shared on UniteIdeas. Back the ones you like, join a team, and help build them.{% endblock %}
+{% block jsonld %}
+{% if prev_url %}<link rel="prev" href="{{ prev_url }}" />{% endif %}
+{% if next_url %}<link rel="next" href="{{ next_url }}" />{% endif %}
+{% endblock %}
 {% block content %}
 
 <div class="page-head">
@@ -42,5 +46,14 @@
   </div>
   {% endfor %}
 </div>
+
+{% if pages > 1 %}
+{% set sep = '&' if '?' in page_base else '?' %}
+<nav class="pager" aria-label="Pages">
+  {% if page > 1 %}<a href="{{ page_base }}{{ sep ~ 'page=' ~ (page - 1) if page > 2 else '' }}">Newer ideas</a>{% endif %}
+  <span class="fine">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a href="{{ page_base }}{{ sep }}page={{ page + 1 }}">More ideas</a>{% endif %}
+</nav>
+{% endif %}
 
 {% endblock %}

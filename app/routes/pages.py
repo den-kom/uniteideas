@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -22,6 +24,7 @@ from app.models import (
 from app.proof import sha256_text
 from app.sealing import unseal
 from app.security import current_user, require_user
+from app.seo import absolute, idea_schema
 from app.verification import Check, Verification, find_proof, verify
 from app.templating import render
 
@@ -63,12 +66,16 @@ def home(
     )
 
 
+PAGE_SIZE = 20
+
+
 @router.get("/ideas")
 def feed(
     request: Request,
     type: str = "all",
     category: str = "",
     sort: str = "top",
+    page: int = 1,
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ):
@@ -82,10 +89,22 @@ def feed(
         if sort == "new"
         else stmt.order_by(desc(Idea.score), desc(Idea.created_at))
     )
-    ideas = db.scalars(stmt.limit(100)).all()
+    total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    pages = max(1, -(-total // PAGE_SIZE))
+    page = max(1, min(page, pages))
+    ideas = db.scalars(stmt.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)).all()
     categories = sorted(
         {c for c in db.scalars(_published(select(Idea.category))).all() if c}
     )
+
+    # Search engines: list the plain feed and each category once; keep other views out of results.
+    cat = category.strip().lower()
+    base = "/ideas" + (f"?category={quote(cat)}" if cat else "")
+    joiner = "&" if "?" in base else "?"
+    canonical = absolute(base + (f"{joiner}page={page}" if page > 1 else ""))
+    robots = "noindex,follow" if (type != "all" or sort != "top") else None
+    title = f"{cat.title()} ideas — UniteIdeas" if cat else "Browse ideas — UniteIdeas"
+
     return render(
         request,
         "feed.html",
@@ -96,6 +115,14 @@ def feed(
             "sort": sort,
             "categories": categories,
             "backed": _backed_ids(db, user, ideas),
+            "page": page,
+            "pages": pages,
+            "canonical_url": canonical,
+            "robots": robots,
+            "page_title": title,
+            "page_base": base,
+            "prev_url": absolute(base + (f"{joiner}page={page - 1}" if page > 2 else "")) if page > 1 else None,
+            "next_url": absolute(base + f"{joiner}page={page + 1}") if page < pages else None,
         },
         user=user,
     )
@@ -179,6 +206,7 @@ def idea_detail(
             "stages": PROGRESS_STAGES,
             "build": build,
             "show_demo": show_demo,
+            "idea_jsonld": idea_schema(idea, idea.owner.display_name),
         },
         user=user,
     )

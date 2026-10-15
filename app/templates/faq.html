@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Questions about UniteIdeas, proof receipts and sealed ideas{% endblock %}
+{% block meta_description %}Answers about sharing ideas safely: sealed detail, proof receipts, public timestamps, patents, teams, backers and the robots that help.{% endblock %}
+{% block jsonld %}{{ jsonld(faq_jsonld) }}{% endblock %}
+{% block content %}
+<h1>Questions people ask</h1>
+<div class="faq">
+  {% for q, a in faq %}
+  <section>
+    <h2>{{ q }}</h2>
+    <p>{{ a }}</p>
+  </section>
+  {% endfor %}
+</div>
+<p>Something missing? <a href="/contact">Ask us</a>.</p>
+{% endblock %}

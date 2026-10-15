@@ -11,7 +11,7 @@ Tests: `./test.sh`.
 - [x] M4 Sign-up questionnaire (goals, skills, hours), editable profile, public /u/{id} page, AgentBob (AI) system user (cannot sign in)
 - [x] M5 Admin area (/admin), moderator vs admin permissions, suspend/reactivate, audit log, timestamp queue page, logged sealed review
 - [x] M6 Terms, privacy, community rules (drafts, flagged as not legal advice), acceptance recorded at sign-up, docs/LEGAL_QUESTIONS.md
-- [ ] M7 SEO and extra pages
+- [x] M7 SEO: canonical, Open Graph, structured data (Organization, CreativeWork, FAQPage), sitemap.xml, robots.txt, noindex for private pages, gzip, cache headers, paginated feed. Pages: About, How it works, FAQ, Contact, Categories
 - [ ] M8 Placeholders (Unite Ideas, Unite Talent), hide POC request, final checks
 
 ## Slogan options (the live one is in app/templates/index.html)
@@ -38,3 +38,9 @@ Tests: `./test.sh`.
 - Moderators no longer see sealed text just by opening an idea. They use a "sealed review" page and every view
   (and every private attachment opened) is written to the audit log. Change this if you disagree.
 - Legal pages assume: 18+, NSW law, contact@uniteideas.org (set CONTACT_EMAIL). All unconfirmed, listed in docs/LEGAL_QUESTIONS.md.
+
+## SEO notes
+- Set `PUBLIC_BASE_URL` to https://uniteideas.org in production, or canonical links and the sitemap will point at the dev address.
+- The logo and favicon were re-saved losslessly (metadata stripped): 17KB to 2KB. The pixels are unchanged.
+- The social sharing image is drawn by scripts/make_og_image.py.
+- Idea URLs stay `/ideas/idea-xxxxxxxx`. Title-based slugs would read nicer in search results; say if you want them.

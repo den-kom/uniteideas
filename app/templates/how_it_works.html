@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}How UniteIdeas works — share, seal, prove, build together{% endblock %}
+{% block meta_description %}Share a one-page idea, keep the details sealed, get a timestamped receipt, then find people to build it with. Here is how each step works.{% endblock %}
+{% block jsonld %}{{ jsonld(site_jsonld()) }}{% endblock %}
+{% block content %}
+<h1>How UniteIdeas works</h1>
+<p class="lede">Good ideas die when their owner is afraid to share them. Here is how UniteIdeas takes that fear away, step by step.</p>
+
+<ol class="steps">
+  <li>
+    <h2>Publish a one-pager</h2>
+    <p>Write a short public page: the problem, who it helps, and roughly how it works. Pick a category and say whether it is digital or a physical product. People can read it, back it, and offer to help.</p>
+  </li>
+  <li>
+    <h2>Seal the details</h2>
+    <p>Put what you are not ready to share (dimensions, materials, algorithms, pricing, plans) in the sealed section. It is encrypted when stored. Only you and the teammates you approve can read it, until you decide to reveal it.</p>
+  </li>
+  <li>
+    <h2>Keep the receipt</h2>
+    <p>The moment you submit, you get a receipt: a fingerprint of your idea and the time. The fingerprint also goes to public timestamp servers that record it in the Bitcoin blockchain. Anyone can <a href="/verify">verify it</a> later; nobody needs to trust us.</p>
+  </li>
+  <li>
+    <h2>Get backed</h2>
+    <p>Members back the ideas they want to see built. Backers decide what rises to the top, and show you where there is real interest.</p>
+  </li>
+  <li>
+    <h2>Build a team</h2>
+    <p>Members ask to join and say how many hours a week they can give. You choose who joins. Teams work out together who owns what they build.</p>
+  </li>
+</ol>
+
+<section class="coming">
+  <h2>Coming soon</h2>
+  <p><strong>Unite Ideas</strong> will spot ideas that overlap and suggest combining them or branching them into their own versions.
+     <strong>Unite Talent</strong> will use the skills on member profiles to suggest teammates who fit an idea.</p>
+  <p>Robots help with the housekeeping, such as flagging content and suggesting matches. People make the decisions.</p>
+</section>
+
+<p class="row">
+  <a class="btn" href="{{ '/submit' if user else '/login' }}">{{ 'Share an idea' if user else 'Join and share an idea' }}</a>
+  <a class="btn ghost" href="/faq">Read the questions people ask</a>
+</p>
+<p class="fine">A receipt is evidence that content existed by a certain time. It is not a patent and not legal advice.</p>
+{% endblock %}

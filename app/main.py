@@ -9,12 +9,14 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app import timestamping
 from app.db import SessionLocal, init_db
 from app.routes import admin, agent_api, auth, content, ideas, moderation, pages, profiles, teams
+from app.seo import is_private_path
 from app.templating import render
 
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +38,21 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="UniteIdeas", version="0.2.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(ROOT / "app" / "static")), name="static")
+
+app.add_middleware(GZipMiddleware, minimum_size=600)
+
+
+@app.middleware("http")
+async def headers(request: Request, call_next):
+    """Cache static files, and keep private areas out of search results at the HTTP level too."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=86400")
+    if is_private_path(path):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
 
 app.include_router(auth.router)
 app.include_router(pages.router)

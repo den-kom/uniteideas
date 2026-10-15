@@ -370,6 +370,54 @@ def main() -> None:
             )
         check("footer links to the legal pages", "/privacy" in anon.get("/").text)
 
+        # --- SEO and content pages ------------------------------------------
+        import json as _json
+
+        for path, needle in (
+            ("/about", "About UniteIdeas"),
+            ("/how-it-works", "How UniteIdeas works"),
+            ("/faq", "Questions people ask"),
+            ("/contact", "Contact"),
+            ("/categories", "Browse by category"),
+        ):
+            r = anon.get(path)
+            check(f"{path} renders", r.status_code == 200 and needle in r.text)
+        check("robots.txt hides private areas", "Disallow: /admin" in anon.get("/robots.txt").text and "Sitemap:" in anon.get("/robots.txt").text)
+        sm = anon.get("/sitemap.xml")
+        check("sitemap is XML", sm.status_code == 200 and sm.text.startswith("<?xml") and "<urlset" in sm.text)
+        check("sitemap lists published ideas", f"/ideas/{idea_id}" in sm.text)
+        check("sitemap lists static pages", "/how-it-works" in sm.text and "/faq" in sm.text)
+        check("sitemap leaves out private pages", "/admin" not in sm.text and "/profile" not in sm.text and "/login" not in sm.text)
+        check("login page is noindex", 'content="noindex,nofollow"' in anon.get("/login").text)
+        check("admin responses carry X-Robots-Tag", "noindex" in owner.get("/admin").headers.get("x-robots-tag", ""))
+        check("home page is indexable", 'content="index,follow"' in anon.get("/").text)
+        idea_html = anon.get(idea_url).text
+        check("idea page has a canonical link", f'rel="canonical" href="http://testserver/ideas/{idea_id}"' in idea_html)
+        check("idea page uses its summary as description", 'name="description" content="A clip-on guard' in idea_html)
+        ld = re.search(r'<script type="application/ld\+json">(.*?)</script>', idea_html, re.S)
+        check("idea page has structured data", ld is not None and _json.loads(ld.group(1))["@type"] == "CreativeWork")
+        faq_ld = re.search(r'<script type="application/ld\+json">(.*?)</script>', anon.get("/faq").text, re.S)
+        check("faq has FAQPage structured data", faq_ld is not None and _json.loads(faq_ld.group(1))["@type"] == "FAQPage")
+        check("social image is set", "og:image" in idea_html and "og-image.png" in idea_html)
+        check("responses are compressed", anon.get("/", headers={"Accept-Encoding": "gzip"}).headers.get("content-encoding") == "gzip")
+        check("static files are cacheable", "max-age" in anon.get("/static/styles.css").headers.get("cache-control", ""))
+        check("filtered feed is kept out of search results", "noindex,follow" in anon.get("/ideas?type=physical").text)
+        check("category feed gets its own canonical", "ideas?category=pets" in anon.get("/ideas?category=pets").text)
+
+        with SessionLocal() as _db2:
+            owner_row = _db2.query(UserRow).filter_by(email="owner@example.com").one()
+            from app.models import Idea as IdeaRow
+            for n in range(24):
+                _db2.add(IdeaRow(owner_id=owner_row.id, title=f"Bulk idea {n}", summary="bulk summary text", status="published"))
+            _db2.add(IdeaRow(owner_id=owner_row.id, title="Hidden pending idea", summary="held for review ok", status="pending_review"))
+            _db2.commit()
+        page1 = anon.get("/ideas?sort=top")
+        page2 = anon.get("/ideas?page=2")
+        check("feed is paginated", "More ideas" in page1.text and "Page 2 of" in page2.text)
+        check("page two has a canonical and a prev link", "page=2" in page2.text and 'rel="prev"' in page2.text)
+        check("pending ideas are not in the sitemap", "Hidden pending" not in anon.get("/sitemap.xml").text)
+        check("a page past the end shows the last page", anon.get("/ideas?page=99").status_code == 200)
+
         # --- roles, audit, suspension ----------------------------------------
         def status(client, path):
             return client.get(path, follow_redirects=False).status_code

@@ -13,6 +13,17 @@
   </script>
   <title>{% block title %}UniteIdeas — share an idea, keep the proof, find a team{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}UniteIdeas is a community for people with ideas. Share a public one-pager, seal the details, keep a timestamped proof, and find others who want to build it with you.{% endblock %}" />
+  <link rel="canonical" href="{% block canonical %}{{ canonical_url }}{% endblock %}" />
+  <meta name="robots" content="{{ robots or ('noindex,nofollow' if noindex else 'index,follow') }}" />
+  <meta property="og:site_name" content="UniteIdeas" />
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+  <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}" />
+  <meta property="og:description" content="{{ self.meta_description()|striptags|trim }}" />
+  <meta property="og:url" content="{{ self.canonical() }}" />
+  <meta property="og:image" content="{{ og_image }}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#16130f" />
+  {% block jsonld %}{% endblock %}
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/logo.png" />
   <link rel="stylesheet" href="/static/styles.css" />
@@ -29,8 +40,9 @@
     {% else %}
       <a href="/login" class="cta">Join</a>
     {% endif %}
-    <a href="/verify">Verify</a>
     <a href="/ideas">Ideas</a>
+    <a href="/how-it-works">How it works</a>
+    <a href="/verify">Verify</a>
     {% if user %}
       <a href="/profile">{{ user.display_name }}</a>
       {% if user.is_staff %}<a href="/moderation">Moderation</a>{% endif %}
@@ -73,9 +85,11 @@
   <p class="fine">
     Proof receipts are evidence that content existed at a given time. They are not patents and not legal advice.
   </p>
-  <p class="fine footer-links">
+  <nav class="fine footer-links" aria-label="Footer">
+    <a href="/about">About</a> · <a href="/how-it-works">How it works</a> · <a href="/faq">FAQ</a> ·
+    <a href="/categories">Categories</a> · <a href="/contact">Contact</a> ·
     <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/community-rules">Community rules</a>
-  </p>
+  </nav>
 </footer>
 <script>
   (function () {

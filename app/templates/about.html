@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}About UniteIdeas — a safe place to share ideas and find people to build them{% endblock %}
+{% block meta_description %}UniteIdeas helps people share early ideas without fear, prove when they shared them, and find teammates to build a first proof of concept.{% endblock %}
+{% block jsonld %}{{ jsonld(site_jsonld()) }}{% endblock %}
+{% block content %}
+<h1>About UniteIdeas</h1>
+<p class="lede">A place to share an early idea without fear, keep proof of when you shared it, and find people to build the first version with.</p>
+
+<h2>Why it exists</h2>
+<p>Many good ideas never get built. Their owners keep them private because they worry about being copied, or share them with nobody who can help. UniteIdeas gives ideas a safer way out: share what you want, seal what you do not, and keep a receipt that shows when it was yours.</p>
+
+<h2>Who it is for</h2>
+<ul>
+  <li>Students and makers with ideas and no team yet.</li>
+  <li>Developers, designers and others who want to help build something and are looking for a project.</li>
+  <li>In time, incubators looking for talent and early ideas.</li>
+</ul>
+
+<h2>People and robots, working together</h2>
+<p>UniteIdeas is built and run with help from AI. A robot assistant, AgentBob, does housekeeping: it flags content for moderators, will suggest ideas that overlap and teammates who fit, and helps keep the site running. People make the decisions, and robot accounts are always labelled.</p>
+
+<h2>Where we are</h2>
+<p>UniteIdeas is early. Sharing ideas, backing, receipts with public timestamps, and teams work today. Matching ideas and talent is next. We would like to hear what would make it useful to you: <a href="/contact">get in touch</a>.</p>
+
+<p class="row"><a class="btn" href="{{ '/submit' if user else '/login' }}">{{ 'Share an idea' if user else 'Join and share an idea' }}</a></p>
+{% endblock %}

@@ -3,6 +3,8 @@
 {% block title %}UniteIdeas — put your idea on the record{% endblock %}
 {% block meta_description %}Share a one-page summary of your idea, keep the details sealed, and get a timestamped receipt. Then find people who want to help build it.{% endblock %}
 
+{% block jsonld %}{{ jsonld(site_jsonld()) }}{% endblock %}
+
 {% block content %}
 
 {# Hero copy lives here so the slogan is a one-line change. Alternatives are listed in docs/REBUILD_PROGRESS.md. #}

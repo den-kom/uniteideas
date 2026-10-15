@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% from "_ideas.html" import backers with context %}
 {% block title %}{{ idea.title }} — UniteIdeas{% endblock %}
+{% block meta_description %}{{ idea.summary }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block jsonld %}{% if idea.status == 'published' %}{{ jsonld(idea_jsonld) }}{% endif %}{% endblock %}
 {% block content %}
 
 {% set idx = stages.index(idea.stage) if idea.stage in stages else -1 %}
