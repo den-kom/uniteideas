@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
         worker.cancel()
 
 
-app = FastAPI(title="UniteIdeas", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="UniteIdeas", version="0.3.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(ROOT / "app" / "static")), name="static")
 
 app.add_middleware(GZipMiddleware, minimum_size=600)
@@ -84,4 +84,4 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "uniteideas", "version": "0.2.0"}
+    return {"status": "ok", "service": "uniteideas", "version": "0.3.0"}

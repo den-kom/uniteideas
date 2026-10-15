@@ -167,6 +167,14 @@ def main() -> None:
         )
         check("public timestamp shown as not requested", "Not requested" in page.text)
 
+        check("signature check shown", "UniteIdeas signature on the receipt" in verified.text)
+        forged = json.loads(json.dumps(bundle))
+        forged["receipt"]["submitted_at_utc"] = "2020-01-01T00:00:00"
+        forged_res = owner.post(
+            "/verify",
+            files={"bundle": ("bundle.json", json.dumps(forged).encode(), "application/json")},
+        )
+        check("forged receipt time is rejected", "Something does not check out" in forged_res.text)
         tampered = json.loads(json.dumps(bundle))
         tampered["canonical_payload"] = tampered["canonical_payload"].replace(
             "Pet guard", "Stolen guard"
@@ -250,40 +258,21 @@ def main() -> None:
         check("helper cannot see the queue", helper.get("/moderation").status_code == 403)
         check("admin user list renders", owner.get("/admin/users").status_code == 200)
 
-        requested = owner.post(f"/ideas/{idea_id}/request-poc", follow_redirects=True)
-        check("POC queued", "POC queued" in requested.text)
-
         headers = {"Authorization": "Bearer smoke-agent-token"}
         check(
             "agent API rejects a bad token",
-            owner.get("/api/agent/queue", headers={"Authorization": "Bearer nope"}).status_code
-            == 403,
+            owner.get("/api/agent/ping", headers={"Authorization": "Bearer nope"}).status_code == 403,
         )
-        jobs = owner.get("/api/agent/queue", headers=headers).json()
-        check("agent sees one queued job", jobs["count"] == 1, str(jobs))
-        job = jobs["jobs"][0]
+        check("agent API rejects a missing token", anon.get("/api/agent/ping").status_code == 401)
+        ping = owner.get("/api/agent/ping", headers=headers).json()
         check(
-            "agent receives the sealed detail it needs to build",
-            "Injection-moulded TPU" in job["sealed_detail"],
+            "agent API answers a valid token as AgentBob",
+            ping["agent"] == "AgentBob (AI)" and ping["user_id"] == "user-agentbob",
+            str(ping),
         )
-
-        updated = owner.post(
-            f"/api/agent/builds/{job['build_id']}",
-            headers=headers,
-            json={
-                "status": "demo_ready",
-                "notes": "Static one-pager built and tested.",
-                "preview_url": "http://10.0.0.5:8410/",
-                "claim": True,
-            },
-        ).json()
-        check("agent reported the demo", updated["status"] == "demo_ready")
-        check("demo private by default", updated["is_public"] is False)
-        check("owner can see their private demo", "Open the demo" in owner.get(idea_url).text)
-        check("public cannot see it yet", "Open the demo" not in anon.get(idea_url).text)
-
-        owner.post(f"/ideas/{idea_id}/demo-visibility", data={"make_public": "1"})
-        check("published demo is public", "Open the demo" in anon.get(idea_url).text)
+        check("the POC request button is gone", "Request a POC" not in owner.get(idea_url).text)
+        check("the old POC route is gone", owner.post(f"/ideas/{idea_id}/request-poc").status_code in {404, 405})
+        check("the old build queue is gone", owner.get("/api/agent/queue", headers=headers).status_code == 404)
 
         second = owner.post(
             "/submit",
@@ -379,9 +368,12 @@ def main() -> None:
             ("/faq", "Questions people ask"),
             ("/contact", "Contact"),
             ("/categories", "Browse by category"),
+            ("/unite-ideas", "Unite Ideas"),
+            ("/unite-talent", "Unite Talent"),
         ):
             r = anon.get(path)
             check(f"{path} renders", r.status_code == 200 and needle in r.text)
+        check("home page announces what is coming", "/unite-ideas" in anon.get("/").text and "/unite-talent" in anon.get("/").text)
         check("robots.txt hides private areas", "Disallow: /admin" in anon.get("/robots.txt").text and "Sitemap:" in anon.get("/robots.txt").text)
         sm = anon.get("/sitemap.xml")
         check("sitemap is XML", sm.status_code == 200 and sm.text.startswith("<?xml") and "<urlset" in sm.text)

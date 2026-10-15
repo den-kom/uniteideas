@@ -521,3 +521,14 @@ td form.inline select { width: auto; margin: 0; padding: 5px 8px; font-size: 13p
 }
 .category-list a:hover { border-color: var(--accent); }
 .pager { display: flex; gap: 16px; align-items: center; margin: 18px 0; }
+
+.chip-soon { vertical-align: middle; font-size: 13px; border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.soon { margin-top: 30px; }
+.soon-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.soon-card {
+  display: block; padding: 16px 18px; border: 1px dashed var(--line); border-radius: var(--radius);
+  text-decoration: none; color: var(--ink); background: transparent;
+}
+.soon-card:hover { border-color: var(--accent); }
+.soon-card h3 { margin: 0 0 4px; }
+.soon-card p { margin: 0; color: var(--muted); }

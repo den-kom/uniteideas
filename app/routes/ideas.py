@@ -12,11 +12,8 @@ from app.config import ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES, get_settings
 from app.db import get_db
 from app.models import (
     Attachment,
-    BUILD_DEMO_READY,
-    BUILD_QUEUED,
     Idea,
     IdeaProof,
-    PocBuild,
     STATUS_PENDING,
     STATUS_PUBLISHED,
     TeamMember,
@@ -25,7 +22,7 @@ from app.models import (
     short_id,
     utc_now,
 )
-from app.proof import build_receipt, compute_content_hash, sha256_bytes, sha256_text
+from app.proof import build_receipt, sign_receipt, compute_content_hash, sha256_bytes, sha256_text
 from app import audit, timestamping
 from app.permissions import can
 from app.sealing import seal, unseal
@@ -291,7 +288,12 @@ def proof_bundle(idea_id: str, db: Session = Depends(get_db)):
         ),
     }
     return JSONResponse(
-        {"receipt": receipt, "canonical_payload": canonical, "public_timestamp": anchor},
+        {
+            "receipt": receipt,
+            "receipt_signature": sign_receipt(receipt, settings.secret_key),
+            "canonical_payload": canonical,
+            "public_timestamp": anchor,
+        },
         headers={
             "Content-Disposition": f'attachment; filename="{idea.id}-proof-bundle.json"'
         },
@@ -339,52 +341,6 @@ def canonical_json(
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="{idea.id}.json"'},
     )
-
-
-@router.post("/ideas/{idea_id}/request-poc")
-def request_poc(
-    idea_id: str,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_user),
-):
-    idea = db.get(Idea, idea_id)
-    if idea is None or idea.owner_id != user.id:
-        return RedirectResponse("/profile?err=Not+your+idea", status_code=303)
-    active = [
-        b
-        for b in idea.builds
-        if b.status not in {BUILD_DEMO_READY, "failed", "escalated"}
-    ]
-    if active:
-        return RedirectResponse(
-            f"/ideas/{idea_id}?err=A+POC+job+is+already+in+the+queue", status_code=303
-        )
-    db.add(PocBuild(idea_id=idea_id, status=BUILD_QUEUED))
-    db.commit()
-    return RedirectResponse(
-        f"/ideas/{idea_id}?msg=POC+queued+for+the+Agent+System", status_code=303
-    )
-
-
-@router.post("/ideas/{idea_id}/demo-visibility")
-def demo_visibility(
-    idea_id: str,
-    make_public: str = Form(default="1"),
-    db: Session = Depends(get_db),
-    user: User = Depends(require_user),
-):
-    idea = db.get(Idea, idea_id)
-    if idea is None or idea.owner_id != user.id:
-        return RedirectResponse("/profile?err=Not+your+idea", status_code=303)
-    build = idea.latest_build
-    if build is None:
-        return RedirectResponse(f"/ideas/{idea_id}?err=No+demo+yet", status_code=303)
-    build.is_public = make_public == "1"
-    build.updated_at = utc_now()
-    db.add(build)
-    db.commit()
-    state = "public" if build.is_public else "private"
-    return RedirectResponse(f"/ideas/{idea_id}?msg=Demo+is+now+{state}", status_code=303)
 
 
 @router.get("/files/{attachment_id}")

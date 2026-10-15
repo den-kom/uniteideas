@@ -6,8 +6,6 @@
 {% block jsonld %}{% if idea.status == 'published' %}{{ jsonld(idea_jsonld) }}{% endif %}{% endblock %}
 {% block content %}
 
-{% set idx = stages.index(idea.stage) if idea.stage in stages else -1 %}
-
 <article class="onepager">
   {% if idea.status == 'pending_review' %}
   <p class="flash bad">
@@ -35,18 +33,6 @@
       {% else %}Backing shows the author that people want this built.{% endif %}
     </p>
   </div>
-
-  <section class="progress">
-    <h2>Progress</h2>
-    <ol class="stages">
-      {% for s in stages %}
-      <li class="{% if idx >= loop.index0 %}done{% endif %}">{{ s|replace('_', ' ') }}</li>
-      {% endfor %}
-    </ol>
-    {% if idea.stage == 'needs_attention' %}
-      <p class="flash bad">This POC needs human attention.</p>
-    {% endif %}
-  </section>
 
   {% if idea.public_body %}
   <section>
@@ -124,33 +110,6 @@
     </ul>
   </section>
   {% endif %}
-
-  <section>
-    <h2>Proof of concept</h2>
-    {% if show_demo and build %}
-      <p><a class="btn" href="{{ build.preview_url }}" target="_blank" rel="noopener">Open the demo</a></p>
-      <p class="fine">Status: {{ build.status|replace('_', ' ') }}{% if not build.is_public %} &middot; visible to you only{% endif %}</p>
-    {% elif build %}
-      <p>Status: <strong>{{ build.status|replace('_', ' ') }}</strong></p>
-      {% if build.notes %}<div class="prose fine">{{ build.notes }}</div>{% endif %}
-    {% else %}
-      <p class="hint">No POC requested yet.</p>
-    {% endif %}
-
-    {% if is_owner %}
-      {% if not build or build.status in ['failed', 'escalated', 'demo_ready'] %}
-      <form method="post" action="/ideas/{{ idea.id }}/request-poc" class="inline">
-        <button class="btn small">Request a POC from the Agent System</button>
-      </form>
-      {% endif %}
-      {% if build and build.preview_url %}
-      <form method="post" action="/ideas/{{ idea.id }}/demo-visibility" class="inline">
-        <input type="hidden" name="make_public" value="{{ '0' if build.is_public else '1' }}" />
-        <button class="btn small ghost">{{ 'Make demo private' if build.is_public else 'Publish demo' }}</button>
-      </form>
-      {% endif %}
-    {% endif %}
-  </section>
 
   <section>
     <h2>Team</h2>

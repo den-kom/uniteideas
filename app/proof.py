@@ -9,6 +9,7 @@ stored records (anchor_provider stays 'local' until then).
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from datetime import datetime
 from typing import Any, Iterable
@@ -82,3 +83,33 @@ def build_receipt(
             "is not legal advice."
         ),
     }
+
+
+SIGNATURE_ALGORITHM = "HMAC-SHA256"
+
+
+def _signing_key(secret: str) -> bytes:
+    # Domain-separated from the sealing key, which is also derived from SECRET_KEY.
+    return hashlib.sha256(b"uniteideas-receipt-signing-v1|" + secret.encode()).digest()
+
+
+def receipt_message(receipt: dict[str, Any]) -> bytes:
+    fields = {k: receipt[k] for k in ("version", "idea_id", "content_hash", "submitted_at_utc", "author_email_sha256") if k in receipt}
+    return json.dumps(fields, sort_keys=True, separators=(",", ":")).encode()
+
+
+def sign_receipt(receipt: dict[str, Any], secret: str) -> dict[str, str]:
+    """Instant UniteIdeas signature, issued at submit time.
+
+    Only this server can produce or check it (it is an HMAC), so it proves the
+    receipt is genuine to us. Third parties rely on the public timestamp.
+    """
+    mac = hmac.new(_signing_key(secret), receipt_message(receipt), hashlib.sha256).hexdigest()
+    return {"algorithm": SIGNATURE_ALGORITHM, "value": mac}
+
+
+def check_receipt_signature(receipt: dict[str, Any], signature: Any, secret: str) -> bool:
+    if not isinstance(signature, dict) or signature.get("algorithm") != SIGNATURE_ALGORITHM:
+        return False
+    expected = sign_receipt(receipt, secret)["value"]
+    return hmac.compare_digest(expected, str(signature.get("value", "")))

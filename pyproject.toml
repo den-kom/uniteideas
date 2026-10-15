@@ -1,6 +1,6 @@
 [project]
 name = "uniteideas"
-version = "0.2.0"
+version = "0.3.0"
 description = "UniteIdeas.org — share ideas safely, prove authorship, collaborate on POCs"
 requires-python = ">=3.12"
 dependencies = [

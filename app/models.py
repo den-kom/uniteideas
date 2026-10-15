@@ -280,7 +280,10 @@ class Report(Base):
 
 
 class PocBuild(Base):
-    """A POC job owned by UniteIdeas; the Agent System pulls and reports back."""
+    """LEGACY: the old proof-of-concept build queue. Nothing creates or reads these any more.
+
+    The table is kept so no data is lost. Dropping it is a deliberate decision for a later migration.
+    """
 
     __tablename__ = "poc_builds"
 

@@ -148,3 +148,13 @@ def robots() -> PlainTextResponse:
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap(db: Session = Depends(get_db)) -> Response:
     return Response(seo.sitemap_xml(db), media_type="application/xml")
+
+
+@router.get("/unite-ideas")
+def unite_ideas(request: Request, user: User | None = Depends(current_user)):
+    return render(request, "unite_ideas.html", {}, user=user)
+
+
+@router.get("/unite-talent")
+def unite_talent(request: Request, user: User | None = Depends(current_user)):
+    return render(request, "unite_talent.html", {}, user=user)

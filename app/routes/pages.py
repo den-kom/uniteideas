@@ -16,12 +16,12 @@ from app.models import (
     Idea,
     IdeaProof,
     JoinRequest,
-    PROGRESS_STAGES,
     TeamMember,
     User,
     Vote,
 )
-from app.proof import sha256_text
+from app.config import get_settings
+from app.proof import check_receipt_signature, sha256_text
 from app.sealing import unseal
 from app.security import current_user, require_user
 from app.seo import absolute, idea_schema
@@ -184,8 +184,6 @@ def idea_detail(
         m.user_id: db.get(User, m.user_id) for m in members
     }
     join_users = {j.user_id: db.get(User, j.user_id) for j in pending_joins}
-    build = idea.latest_build
-    show_demo = bool(build and build.preview_url and (build.is_public or is_owner))
 
     return render(
         request,
@@ -203,9 +201,6 @@ def idea_detail(
             "members": members,
             "member_users": member_users,
             "has_voted": has_voted,
-            "stages": PROGRESS_STAGES,
-            "build": build,
-            "show_demo": show_demo,
             "idea_jsonld": idea_schema(idea, idea.owner.display_name),
         },
         user=user,
@@ -274,11 +269,22 @@ async def verify_bundle(
             f"recomputed {recomputed[:16]}… and the bundle claims {claimed[:16]}…",
         )
     ]
+    if "receipt_signature" in parsed:
+        sig_ok = check_receipt_signature(receipt, parsed["receipt_signature"], get_settings().secret_key)
+        checks.append(
+            Check(
+                "UniteIdeas signature on the receipt",
+                "pass" if sig_ok else "fail",
+                "Issued by this site at submission and not altered."
+                if sig_ok
+                else "The receipt was changed or was not issued by this site.",
+            )
+        )
     stored = db.scalar(select(IdeaProof).where(IdeaProof.idea_id == idea_id))
     if stored is not None and stored.content_hash == claimed:
         result = verify(db, stored)
         result.checks = checks + result.checks
-        result.ok = result.ok and checks[0].state == "pass"
+        result.ok = result.ok and all(c.state == "pass" for c in checks)
         return render(request, "verify.html", {"q": "", "verification": result}, user=user)
     checks.append(Check("Registered on UniteIdeas", "fail", "No matching record on this site."))
     return render(
