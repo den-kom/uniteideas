@@ -316,6 +316,43 @@ def main() -> None:
         check("type filter works", "Pet guard" in anon.get("/ideas?type=physical").text)
         check("type filter excludes", "Pet guard" not in anon.get("/ideas?type=digital").text)
 
+        # --- profiles --------------------------------------------------------
+        check("new account is nudged to fill in a profile", "Tell us what you can help with" in helper.get("/").text)
+        saved = helper.post(
+            "/profile/edit",
+            data={
+                "display_name": "Willing Helper",
+                "headline": "Maker of things",
+                "hours_per_week": "6",
+                "goals": ["join", "bogus-goal"],
+                "skills": ["web-dev", "3d-modelling", "not-a-skill"],
+                "other_skills": "Beekeeping",
+                "profile_public": "1",
+            },
+            follow_redirects=True,
+        )
+        check("profile saved", "Profile saved" in saved.text)
+        helper_id = helper.get("/profile").text.split("/u/")[1].split('"')[0]
+        public = anon.get(f"/u/{helper_id}")
+        check("public profile shows skills", "3D modelling" in public.text and "Web development" in public.text)
+        check("unknown skills are dropped", "not-a-skill" not in public.text and "bogus" not in public.text)
+        check("email is not shown on the profile", "helper@example.com" not in public.text)
+        check("banner stops nagging once profiled", "Tell us what you can help with" not in helper.get("/").text)
+        helper.post(
+            "/profile/edit",
+            data={"display_name": "Willing Helper", "skills": ["web-dev"]},
+        )
+        check("a private profile is hidden from visitors", anon.get(f"/u/{helper_id}").status_code == 404)
+        check("a private profile is visible to its owner", helper.get(f"/u/{helper_id}").status_code == 200)
+        check(
+            "skills can be removed",
+            "3D modelling" not in helper.get(f"/u/{helper_id}").text,
+        )
+        bot = anon.get("/u/user-agentbob")
+        check("AgentBob has a public profile marked as a robot", bot.status_code == 200 and "robot" in bot.text)
+        refused = anon.post("/login", data={"email": "agentbob@system.invalid"}, follow_redirects=False)
+        check("AgentBob cannot sign in", "cannot+sign+in" in refused.headers.get("location", ""))
+
     check_base_url_resolution()
     print(f"\n{len(PASSED)} checks passed")
 

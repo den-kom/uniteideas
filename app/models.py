@@ -21,6 +21,8 @@ from app.db import Base
 ROLE_USER = "user"
 ROLE_MODERATOR = "moderator"
 ROLE_ADMIN = "admin"
+# Service accounts such as AgentBob. They cannot sign in; they act through the agent API.
+ROLE_BOT = "bot"
 STAFF_ROLES = {ROLE_MODERATOR, ROLE_ADMIN}
 
 IDEA_TYPES = ("digital", "physical")
@@ -67,8 +69,32 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     onboarding_done: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    # Profile (filled in by the sign-up questionnaire, editable any time).
+    headline: Mapped[str] = mapped_column(String(120), default="")
+    bio: Mapped[str] = mapped_column(Text, default="")
+    location: Mapped[str] = mapped_column(String(80), default="")
+    goals: Mapped[str] = mapped_column(String(200), default="")  # comma-separated slugs
+    other_skills: Mapped[str] = mapped_column(String(300), default="")
+    hours_per_week: Mapped[int] = mapped_column(Integer, default=0)
+    profile_public: Mapped[bool] = mapped_column(Boolean, default=True)
+    profile_done: Mapped[bool] = mapped_column(Boolean, default=False)
 
     ideas: Mapped[list["Idea"]] = relationship(back_populates="owner")
+    skills: Mapped[list["UserSkill"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+    @property
+    def is_bot(self) -> bool:
+        return self.role == ROLE_BOT
+
+    @property
+    def skill_slugs(self) -> list[str]:
+        return [s.skill for s in self.skills]
+
+    @property
+    def goal_slugs(self) -> list[str]:
+        return [g for g in self.goals.split(",") if g]
 
     @property
     def is_staff(self) -> bool:
@@ -77,6 +103,17 @@ class User(Base):
     @property
     def is_admin(self) -> bool:
         return self.role == ROLE_ADMIN
+
+
+class UserSkill(Base):
+    __tablename__ = "user_skills"
+    __table_args__ = (UniqueConstraint("user_id", "skill", name="uq_user_skill"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    skill: Mapped[str] = mapped_column(String(60), index=True)
+
+    user: Mapped[User] = relationship(back_populates="skills")
 
 
 class LoginToken(Base):

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Tell us about you' if welcome else 'Edit your profile' }} — UniteIdeas{% endblock %}
+{% block content %}
+
+<h1>{{ 'Tell us about you' if welcome else 'Edit your profile' }}</h1>
+<p class="lede">
+  {% if welcome %}
+  A few quick answers help the right people find you, and help us suggest teammates and ideas that fit.
+  Everything is optional except your name, and you can change it later.
+  {% else %}
+  Keep this up to date so teams can find the right people. Your email is never shown.
+  {% endif %}
+</p>
+
+<form method="post" action="/profile/edit" class="stack form profile-form">
+  <label>Name shown on your ideas
+    <input type="text" name="display_name" value="{{ user.display_name }}" required minlength="2" maxlength="80" />
+  </label>
+
+  <label>One line about you
+    <input type="text" name="headline" value="{{ user.headline }}" maxlength="120"
+           placeholder="Backend developer who loves pet products" />
+  </label>
+
+  <fieldset>
+    <legend>What brings you here?</legend>
+    <div class="choice-list">
+      {% for slug, label in goals.items() %}
+      <label class="choice"><input type="checkbox" name="goals" value="{{ slug }}" {% if slug in my_goals %}checked{% endif %} /> {{ label }}</label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>What can you help with?</legend>
+    <p class="fine">Tick everything that applies. This is what Unite Talent will use to suggest teammates.</p>
+    {% for group, items in skill_groups %}
+    <div class="skill-group">
+      <h3>{{ group }}</h3>
+      <div class="choice-chips">
+        {% for slug, label in items %}
+        <label class="chip-choice">
+          <input type="checkbox" name="skills" value="{{ slug }}" {% if slug in my_skills %}checked{% endif %} />
+          <span>{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    <label>Anything else?
+      <input type="text" name="other_skills" value="{{ user.other_skills }}" maxlength="300"
+             placeholder="Beekeeping, Rust, accessibility audits..." />
+    </label>
+  </fieldset>
+
+  <div class="two-up">
+    <label>Hours a week you could give to projects
+      <input type="number" name="hours_per_week" min="0" max="{{ settings.max_pledge_hours_per_week }}" value="{{ user.hours_per_week }}" />
+    </label>
+    <label>Where you are (optional)
+      <input type="text" name="location" value="{{ user.location }}" maxlength="80" placeholder="Sydney, Australia" />
+    </label>
+  </div>
+
+  <label>About you (optional)
+    <textarea name="bio" rows="5" maxlength="1200" placeholder="What you have built, what you care about, what you are looking for.">{{ user.bio }}</textarea>
+  </label>
+
+  <label class="choice">
+    <input type="checkbox" name="profile_public" value="1" {% if user.profile_public %}checked{% endif %} />
+    Show my profile to other members and visitors
+  </label>
+  <p class="fine">Your email address is never shown. Ideas you publish always show your name.</p>
+
+  <div class="row">
+    <button class="btn">{{ 'Save and continue' if welcome else 'Save profile' }}</button>
+    {% if welcome %}<a href="/onboarding">Skip for now</a>{% else %}<a href="/profile">Cancel</a>{% endif %}
+  </div>
+</form>
+
+{% endblock %}

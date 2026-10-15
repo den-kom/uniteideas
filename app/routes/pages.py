@@ -279,7 +279,7 @@ def profile(
     ).all()
     join_ideas = {j.idea_id: db.get(Idea, j.idea_id) for j in my_joins}
     member_ideas = {m.idea_id: db.get(Idea, m.idea_id) for m in my_memberships}
-    pledged = sum(m.pledged_hours_per_day for m in my_memberships)
+    pledged = sum(m.pledged_hours_per_week for m in my_memberships)
     return render(
         request,
         "profile.html",

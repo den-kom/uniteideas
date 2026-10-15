@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app import timestamping
 from app.db import SessionLocal, init_db
-from app.routes import agent_api, auth, ideas, moderation, pages, teams
+from app.routes import agent_api, auth, ideas, moderation, pages, profiles, teams
 from app.templating import render
 
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,7 @@ app.mount("/static", StaticFiles(directory=str(ROOT / "app" / "static")), name="
 
 app.include_router(auth.router)
 app.include_router(pages.router)
+app.include_router(profiles.router)
 app.include_router(ideas.router)
 app.include_router(teams.router)
 app.include_router(moderation.router)

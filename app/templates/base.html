@@ -49,7 +49,12 @@
   </nav>
 </header>
 
-{% if user and not user.onboarding_done %}
+{% if request.url.path == '/profile/edit' %}
+{% elif user and not user.profile_done %}
+<div class="banner">
+  Welcome! <a href="/profile/edit?welcome=1">Tell us what you can help with</a> so teams can find you.
+</div>
+{% elif user and not user.onboarding_done and request.url.path != '/onboarding' %}
 <div class="banner">
   New here? <a href="/onboarding">Take the 60-second tour</a> to see how UniteIdeas protects your idea.
 </div>

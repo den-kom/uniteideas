@@ -8,7 +8,7 @@ Tests: `./test.sh`.
 - [x] M1 Design foundation, backer vote control (arrow, count, word) on home and /ideas, toggle to remove backing
 - [x] M2 Homepage copy
 - [x] M3 Verify tied to ideas, timestamp queue (OpenTimestamps), Alembic migrations (0001 baseline, 0002 proof queue)
-- [ ] M4 Accounts, questionnaire, profile, Alembic
+- [x] M4 Sign-up questionnaire (goals, skills, hours), editable profile, public /u/{id} page, AgentBob (AI) system user (cannot sign in)
 - [ ] M5 Admin roles and audit log
 - [ ] M6 Terms, privacy, community rules (drafts)
 - [ ] M7 SEO and extra pages
@@ -31,3 +31,7 @@ Tests: `./test.sh`.
 - On start the site upgrades its own database (old databases are stamped and migrated).
 - Run `.venv/bin/python scripts/check_timestamp.py` on the server. The sandbox that built this
   could not reach the calendar servers, so real timestamping is untested until you run it.
+
+## Bugs found and fixed on the way
+- /profile crashed for anyone who had joined a team (it read a column that does not exist).
+- The first real sign-up becomes admin; the AgentBob account is excluded from that count.

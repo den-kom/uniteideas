@@ -72,6 +72,13 @@ def init_db() -> None:
             if "users" not in tables:
                 Base.metadata.create_all(conn)
                 command.stamp(cfg, "head")
-                return
-            command.stamp(cfg, BASELINE_REVISION)
-        command.upgrade(cfg, "head")
+            else:
+                command.stamp(cfg, BASELINE_REVISION)
+                command.upgrade(cfg, "head")
+        else:
+            command.upgrade(cfg, "head")
+
+    from app.system_users import ensure_system_users
+
+    with SessionLocal() as db:
+        ensure_system_users(db)
