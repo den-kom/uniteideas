@@ -235,10 +235,6 @@ input[type="file"] { margin-top: 6px; font-size: 14px; }
 }
 .stages li.done { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
-.checks { list-style: none; padding: 0; }
-.checks li { padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
-.checks li.pass strong { color: var(--ok); }
-.checks li.fail strong { color: var(--bad); }
 
 .tour { padding-left: 22px; }
 .tour li { margin-bottom: 20px; }
@@ -421,3 +417,35 @@ a.chip:hover { border-color: var(--accent); color: var(--accent); }
   * { transition: none !important; }
   .receipt { transform: none; }
 }
+
+/* verify */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.verify-box { display: flex; gap: 10px; margin: 18px 0 24px; }
+.verify-box input { margin: 0; flex: 1; }
+.checks { list-style: none; padding: 0; margin: 14px 0; }
+.checks li { display: flex; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); align-items: flex-start; }
+.checks li:first-child { border-top: none; }
+.check-mark {
+  flex: 0 0 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center;
+  justify-content: center; font-weight: 800; background: var(--line); color: var(--muted);
+}
+.checks li.pass .check-mark { background: var(--ok); color: var(--card); }
+.checks li.fail .check-mark { background: var(--bad); color: var(--card); }
+.checks li.wait .check-mark { background: var(--accent); color: var(--accent-ink); }
+.check-detail { display: block; word-break: break-word; }
+.verify-idea { margin: 0 0 6px; font-weight: 600; }
+.how-verify { margin-top: 36px; }
+.how-verify details { margin: 12px 0; }
+.how-verify summary { cursor: pointer; color: var(--link); }
+.cta-strip {
+  margin-top: 36px; padding: 22px; border: 1px dashed var(--line); border-radius: var(--radius);
+}
+.cta-strip h2 { margin-top: 0; }
+@media (max-width: 520px) { .verify-box { flex-direction: column; } }
+
+.proof-steps { list-style: none; padding: 0; margin: 10px 0; }
+.proof-steps li { display: flex; gap: 12px; padding: 8px 0; align-items: flex-start; }
+.proof-steps li.pass .check-mark { background: var(--ok); color: var(--card); }
+.proof-steps li.fail .check-mark { background: var(--bad); color: var(--card); }
+.proof-steps li.wait .check-mark { background: var(--accent); color: var(--accent-ink); }
+.fingerprint { word-break: break-all; font-size: 13px; color: var(--muted); }

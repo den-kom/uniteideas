@@ -55,19 +55,31 @@
   <section class="proof-box">
     <h2>Proof of authorship</h2>
     {% if proof %}
-    <dl>
-      <dt>Submitted</dt><dd>{{ proof.created_at.strftime('%d %b %Y %H:%M') }} UTC</dd>
-      <dt>Algorithm</dt><dd>{{ proof.algorithm }}</dd>
-      <dt>Content fingerprint</dt><dd><code>{{ proof.content_hash }}</code></dd>
-      <dt>Anchor</dt><dd>{{ proof.anchor_provider }}</dd>
-    </dl>
-    <p>
-      <a class="btn small" href="/ideas/{{ idea.id }}/proof-bundle.json">Download proof bundle</a>
-      <a class="btn small ghost" href="/verify">Verify it</a>
+    <ol class="proof-steps">
+      <li class="pass">
+        <span class="check-mark" aria-hidden="true">✓</span>
+        <div><strong>Receipt issued</strong>
+          <span class="fine check-detail">{{ proof.created_at.strftime('%d %b %Y %H:%M') }} UTC, tied to {{ idea.owner.display_name }}'s account.</span></div>
+      </li>
+      <li class="{{ 'pass' if proof.is_confirmed else ('wait' if proof.is_pending else ('fail' if proof.anchor_status == 'failed' else 'info')) }}">
+        <span class="check-mark" aria-hidden="true">{{ '✓' if proof.is_confirmed else ('…' if proof.is_pending else ('✗' if proof.anchor_status == 'failed' else '–')) }}</span>
+        <div><strong>Public timestamp</strong>
+          <span class="fine check-detail">
+            {% if proof.is_confirmed %}Confirmed in the Bitcoin chain ({{ proof.anchor_reference }}).
+            {% elif proof.is_pending %}Waiting for Bitcoin confirmation. This usually takes a few hours.
+            {% elif proof.anchor_status == 'failed' %}Could not be obtained yet. We will look into it.
+            {% else %}Not requested.{% endif %}
+          </span></div>
+      </li>
+    </ol>
+    <p class="fingerprint">Fingerprint <code>{{ proof.content_hash }}</code></p>
+    <p class="row">
+      <a class="btn small" href="/ideas/{{ idea.id }}/proof-bundle.json">Download receipt</a>
+      {% if proof.anchor_proof %}<a class="btn small ghost" href="/ideas/{{ idea.id }}/proof.ots">Timestamp file</a>{% endif %}
+      <a class="btn small ghost" href="/verify?q={{ idea.id }}">Verify it</a>
     </p>
     <p class="fine">
-      Anyone can check this bundle without seeing the sealed detail. The bundle contains the
-      fingerprint of the sealed text, not the text itself.
+      Only the fingerprint leaves UniteIdeas. The sealed text stays private; the receipt holds its fingerprint, not the text.
     </p>
     {% else %}
     <p>No proof record for this idea.</p>

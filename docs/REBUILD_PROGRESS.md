@@ -7,7 +7,7 @@ Tests: `./test.sh`.
 ## Milestones
 - [x] M1 Design foundation, backer vote control (arrow, count, word) on home and /ideas, toggle to remove backing
 - [x] M2 Homepage copy
-- [ ] M3 Verify tied to ideas, timestamp queue (OpenTimestamps)
+- [x] M3 Verify tied to ideas, timestamp queue (OpenTimestamps), Alembic migrations (0001 baseline, 0002 proof queue)
 - [ ] M4 Accounts, questionnaire, profile, Alembic
 - [ ] M5 Admin roles and audit log
 - [ ] M6 Terms, privacy, community rules (drafts)
@@ -25,3 +25,9 @@ Tests: `./test.sh`.
 - Kept FastAPI. Added Alembic for migrations (M4).
 - Backing is a toggle: click again to remove it.
 - Home shows 4 most backed and 4 newest to keep the page light.
+
+## Deploy notes
+- Run `./build.sh` after pulling: new dependencies are `alembic` and `opentimestamps`.
+- On start the site upgrades its own database (old databases are stamped and migrated).
+- Run `.venv/bin/python scripts/check_timestamp.py` on the server. The sandbox that built this
+  could not reach the calendar servers, so real timestamping is untested until you run it.

@@ -153,9 +153,23 @@ class IdeaProof(Base):
     anchor_provider: Mapped[str] = mapped_column(String(30), default="local")
     anchor_reference: Mapped[str] = mapped_column(String(200), default="")
     anchored_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # External timestamp queue. See app/timestamping.py for the states.
+    anchor_status: Mapped[str] = mapped_column(String(20), default="none")
+    anchor_proof: Mapped[str] = mapped_column(Text, default="")  # base64 .ots file
+    anchor_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    anchor_next_try_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    anchor_error: Mapped[str] = mapped_column(String(300), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     idea: Mapped[Idea] = relationship(back_populates="proof")
+
+    @property
+    def is_confirmed(self) -> bool:
+        return self.anchor_status == "confirmed"
+
+    @property
+    def is_pending(self) -> bool:
+        return self.anchor_status in {"pending_submit", "pending_confirm"}
 
 
 class Attachment(Base):

@@ -94,3 +94,17 @@ Consequences worth being explicit about:
 | Signed-in members | No |
 | Public | Only after the owner reveals it, which is permanent |
 | Agent System | Only for ideas whose owner requested a POC |
+
+## Public timestamps (rebuild)
+
+Every new idea's fingerprint (the SHA-256 of its canonical content) is queued for an
+OpenTimestamps timestamp (`app/timestamping.py`). A background worker sends it to public
+calendar servers and later asks whether a Bitcoin block now attests it. States:
+`pending_submit`, `pending_confirm`, `confirmed`, `failed`, `none`.
+
+- Only the 32-byte fingerprint leaves the server.
+- The `.ots` file is served at `/ideas/{id}/proof.ots`; the exact bytes it covers are at
+  `/ideas/{id}/canonical.json`. With the OpenTimestamps client: `ots verify {id}.json.ots`.
+- Switch off with `TIMESTAMP_PROVIDER=none`. Choose calendars with `OTS_CALENDARS`.
+- `scripts/check_timestamp.py` tests that the server can reach the calendars.
+- A UniteIdeas-owned log can be added later as another `anchor_provider`.

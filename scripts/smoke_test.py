@@ -26,6 +26,7 @@ os.environ.update(
         "PUBLIC_BASE_URL": "http://testserver",
         "DEV_SHOW_MAGIC_LINK": "true",
         "MAX_PLEDGE_HOURS_PER_WEEK": "40",
+        "TIMESTAMP_PROVIDER": "none",
     }
 )
 
@@ -139,8 +140,32 @@ def main() -> None:
             "/verify",
             files={"bundle": ("bundle.json", json.dumps(bundle).encode(), "application/json")},
         )
-        check("verification page reports success", "Verified" in verified.text)
-        check("registry check passed", verified.text.count("PASS") >= 3, verified.text[:400])
+        check("verification page reports success", "This idea checks out" in verified.text)
+        check("registry check passed", verified.text.count("passed.") >= 3, verified.text[:400])
+        anon_lookup = TestClient(app)
+        by_id = anon_lookup.get(f"/verify?q={idea_id}")
+        check("anyone can look up an idea by id", "This idea checks out" in by_id.text)
+        check("lookup shows the public idea title", "Pet guard for office chair wheels" in by_id.text)
+        by_link = anon_lookup.get(f"/verify?q=http://10.0.0.5:8100/ideas/{idea_id}")
+        check("lookup accepts a pasted link", "This idea checks out" in by_link.text)
+        by_hash = anon_lookup.get(f"/verify?q={bundle['receipt']['content_hash']}")
+        check("lookup accepts a fingerprint", "This idea checks out" in by_hash.text)
+        check(
+            "unchanged content is checked server-side",
+            "unchanged since it was timestamped" in by_id.text,
+        )
+        missing = anon_lookup.get("/verify?q=idea-00000000")
+        check("unknown idea says no record found", "No record found" in missing.text)
+        canonical_file = anon_lookup.get(f"/ideas/{idea_id}/canonical.json")
+        check(
+            "canonical file hashes to the fingerprint",
+            sha256_text(canonical_file.text) == bundle["receipt"]["content_hash"],
+        )
+        check(
+            "no timestamp file when none was requested",
+            anon_lookup.get(f"/ideas/{idea_id}/proof.ots").status_code == 404,
+        )
+        check("public timestamp shown as not requested", "Not requested" in page.text)
 
         tampered = json.loads(json.dumps(bundle))
         tampered["canonical_payload"] = tampered["canonical_payload"].replace(
@@ -150,7 +175,7 @@ def main() -> None:
             "/verify",
             files={"bundle": ("bundle.json", json.dumps(tampered).encode(), "application/json")},
         )
-        check("tampered bundle is rejected", "Could not verify" in rejected.text)
+        check("tampered bundle is rejected", "Something does not check out" in rejected.text)
 
         anon = TestClient(app)
         public_page = anon.get(idea_url)

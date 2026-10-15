@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -26,7 +26,9 @@ from app.models import (
     utc_now,
 )
 from app.proof import build_receipt, compute_content_hash, sha256_bytes, sha256_text
+from app import timestamping
 from app.sealing import seal, unseal
+from app.verification import canonical_for
 from app.security import current_user, require_user
 from app.templating import render
 
@@ -144,13 +146,13 @@ async def submit_idea(
         published_at=utc_now() if status == STATUS_PUBLISHED else None,
     )
     db.add(idea)
-    db.add(
-        IdeaProof(
-            idea_id=idea_id,
-            content_hash=content_hash,
-            author_email_hash=sha256_text(user.email.lower()),
-        )
+    proof = IdeaProof(
+        idea_id=idea_id,
+        content_hash=content_hash,
+        author_email_hash=sha256_text(user.email.lower()),
     )
+    timestamping.queue_for_timestamp(proof)
+    db.add(proof)
     for name, path_str, ctype, size, digest in stored_files:
         db.add(
             Attachment(
@@ -274,11 +276,67 @@ def proof_bundle(idea_id: str, db: Session = Depends(get_db)):
         anchor_reference=idea.proof.anchor_reference,
         verify_url=f"{settings.public_base_url}/verify",
     )
+    anchor = {
+        "provider": idea.proof.anchor_provider,
+        "status": idea.proof.anchor_status,
+        "reference": idea.proof.anchor_reference,
+        "confirmed_at_utc": idea.proof.anchored_at.replace(microsecond=0).isoformat()
+        if idea.proof.anchored_at
+        else None,
+        "opentimestamps_file_base64": idea.proof.anchor_proof or None,
+        "how_to_check": (
+            "Save canonical_payload to a file exactly as written, then run "
+            "`ots verify <file>.ots <file>` with the OpenTimestamps client."
+        ),
+    }
     return JSONResponse(
-        {"receipt": receipt, "canonical_payload": canonical},
+        {"receipt": receipt, "canonical_payload": canonical, "public_timestamp": anchor},
         headers={
             "Content-Disposition": f'attachment; filename="{idea.id}-proof-bundle.json"'
         },
+    )
+
+
+def _proof_visible(idea: Idea | None, user: User | None) -> bool:
+    if idea is None or idea.proof is None:
+        return False
+    if idea.status == "published":
+        return True
+    return bool(user and (user.is_staff or user.id == idea.owner_id))
+
+
+@router.get("/ideas/{idea_id}/proof.ots")
+def proof_ots(
+    idea_id: str,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(current_user),
+):
+    """The OpenTimestamps file for this idea's fingerprint."""
+    idea = db.get(Idea, idea_id)
+    if not _proof_visible(idea, user) or not idea.proof.anchor_proof:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return Response(
+        timestamping.decode(idea.proof.anchor_proof),
+        media_type="application/vnd.opentimestamps.v1",
+        headers={"Content-Disposition": f'attachment; filename="{idea.id}.json.ots"'},
+    )
+
+
+@router.get("/ideas/{idea_id}/canonical.json")
+def canonical_json(
+    idea_id: str,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(current_user),
+):
+    """The exact bytes whose SHA-256 is the fingerprint, for checking the .ots file."""
+    idea = db.get(Idea, idea_id)
+    if not _proof_visible(idea, user):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    _, canonical = canonical_for(idea)
+    return Response(
+        canonical.encode("utf-8"),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{idea.id}.json"'},
     )
 
 

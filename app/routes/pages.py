@@ -22,6 +22,7 @@ from app.models import (
 from app.proof import sha256_text
 from app.sealing import unseal
 from app.security import current_user, require_user
+from app.verification import Check, Verification, find_proof, verify
 from app.templating import render
 
 router = APIRouter()
@@ -185,87 +186,80 @@ def idea_detail(
 
 
 @router.get("/verify")
-def verify_form(request: Request, user: User | None = Depends(current_user)):
-    return render(request, "verify.html", {"result": None}, user=user)
+def verify_form(
+    request: Request,
+    q: str = "",
+    db: Session = Depends(get_db),
+    user: User | None = Depends(current_user),
+):
+    """Look up an idea's proof by its link, id or fingerprint."""
+    if not q.strip():
+        return render(request, "verify.html", {"q": "", "verification": None}, user=user)
+    proof = find_proof(db, q)
+    if proof is None:
+        return render(
+            request,
+            "verify.html",
+            {"q": q, "verification": None, "not_found": True},
+            user=user,
+        )
+    return render(
+        request, "verify.html", {"q": q, "verification": verify(db, proof)}, user=user
+    )
 
 
 @router.post("/verify")
 async def verify_bundle(
     request: Request,
     bundle: UploadFile | None = File(default=None),
-    content_hash: str = Form(default=""),
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ):
-    result: dict = {"checks": [], "ok": False}
-
-    if bundle is not None and bundle.filename:
-        raw = await bundle.read()
-        try:
-            parsed = json.loads(raw.decode("utf-8"))
-            receipt = parsed["receipt"]
-            canonical = parsed["canonical_payload"]
-        except (json.JSONDecodeError, KeyError, UnicodeDecodeError):
-            result["checks"].append(("Bundle readable", False, "Not a valid proof bundle"))
-            return render(request, "verify.html", {"result": result}, user=user)
-
-        recomputed = sha256_text(canonical)
-        claimed = receipt.get("content_hash", "")
-        result["checks"].append(
-            (
-                "Content matches its hash",
-                recomputed == claimed,
-                f"recomputed {recomputed[:16]}… vs claimed {claimed[:16]}…",
-            )
+    """Advanced: check a proof bundle that someone downloaded earlier."""
+    if bundle is None or not bundle.filename:
+        return RedirectResponse("/verify?err=Choose+a+proof+bundle+to+check", status_code=303)
+    raw = await bundle.read()
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+        receipt = parsed["receipt"]
+        canonical = parsed["canonical_payload"]
+        claimed = receipt["content_hash"]
+        idea_id = receipt.get("idea_id", "")
+    except (json.JSONDecodeError, KeyError, UnicodeDecodeError, TypeError):
+        return render(
+            request,
+            "verify.html",
+            {
+                "q": "",
+                "verification": Verification(
+                    ok=False,
+                    checks=[Check("Bundle is readable", "fail", "This is not a valid proof bundle.")],
+                ),
+            },
+            user=user,
         )
 
-        stored = db.scalar(
-            select(IdeaProof).where(IdeaProof.idea_id == receipt.get("idea_id", ""))
+    recomputed = sha256_text(canonical)
+    checks = [
+        Check(
+            "Content matches its fingerprint",
+            "pass" if recomputed == claimed else "fail",
+            f"recomputed {recomputed[:16]}… and the bundle claims {claimed[:16]}…",
         )
-        result["checks"].append(
-            (
-                "Registered on UniteIdeas",
-                stored is not None and stored.content_hash == claimed,
-                f"idea {receipt.get('idea_id')}"
-                if stored
-                else "no matching record on this instance",
-            )
-        )
-        if stored is not None:
-            result["checks"].append(
-                (
-                    "Timestamp on record",
-                    True,
-                    stored.created_at.replace(microsecond=0).isoformat() + " UTC",
-                )
-            )
-        result["receipt"] = receipt
-        result["ok"] = all(ok for _, ok, _ in result["checks"])
-        return render(request, "verify.html", {"result": result}, user=user)
-
-    if content_hash.strip():
-        stored = db.scalar(
-            select(IdeaProof).where(IdeaProof.content_hash == content_hash.strip().lower())
-        )
-        result["checks"].append(
-            (
-                "Hash found in registry",
-                stored is not None,
-                f"idea {stored.idea_id}" if stored else "no match",
-            )
-        )
-        if stored is not None:
-            result["checks"].append(
-                (
-                    "Timestamp on record",
-                    True,
-                    stored.created_at.replace(microsecond=0).isoformat() + " UTC",
-                )
-            )
-        result["ok"] = stored is not None
-        return render(request, "verify.html", {"result": result}, user=user)
-
-    return RedirectResponse("/verify?err=Upload+a+bundle+or+paste+a+hash", status_code=303)
+    ]
+    stored = db.scalar(select(IdeaProof).where(IdeaProof.idea_id == idea_id))
+    if stored is not None and stored.content_hash == claimed:
+        result = verify(db, stored)
+        result.checks = checks + result.checks
+        result.ok = result.ok and checks[0].state == "pass"
+        return render(request, "verify.html", {"q": "", "verification": result}, user=user)
+    checks.append(Check("Registered on UniteIdeas", "fail", "No matching record on this site."))
+    return render(
+        request,
+        "verify.html",
+        {"q": "", "verification": Verification(ok=False, checks=checks)},
+        user=user,
+    )
 
 
 @router.get("/profile")
