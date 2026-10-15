@@ -491,3 +491,12 @@ a.stat:hover { border-color: var(--accent); }
 input.reason { width: 150px; display: inline-block; margin: 0 4px 0 0; padding: 5px 8px; font-size: 13px; }
 td form.inline { display: inline-flex; gap: 4px; align-items: center; margin: 2px 8px 2px 0; }
 td form.inline select { width: auto; margin: 0; padding: 5px 8px; font-size: 13px; }
+
+/* legal pages */
+.legal { max-width: 46rem; }
+.legal h2 { font-size: 20px; margin-top: 30px; }
+.legal p, .legal li { max-width: 42rem; }
+.legal li { margin-bottom: 6px; }
+.legal .legal-draft { margin-bottom: 22px; }
+.legal-foot { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 14px; }
+.footer-links a { color: var(--muted); }

@@ -10,7 +10,7 @@ Tests: `./test.sh`.
 - [x] M3 Verify tied to ideas, timestamp queue (OpenTimestamps), Alembic migrations (0001 baseline, 0002 proof queue)
 - [x] M4 Sign-up questionnaire (goals, skills, hours), editable profile, public /u/{id} page, AgentBob (AI) system user (cannot sign in)
 - [x] M5 Admin area (/admin), moderator vs admin permissions, suspend/reactivate, audit log, timestamp queue page, logged sealed review
-- [ ] M6 Terms, privacy, community rules (drafts)
+- [x] M6 Terms, privacy, community rules (drafts, flagged as not legal advice), acceptance recorded at sign-up, docs/LEGAL_QUESTIONS.md
 - [ ] M7 SEO and extra pages
 - [ ] M8 Placeholders (Unite Ideas, Unite Talent), hide POC request, final checks
 
@@ -37,3 +37,4 @@ Tests: `./test.sh`.
 - The first real sign-up becomes admin; the AgentBob account is excluded from that count.
 - Moderators no longer see sealed text just by opening an idea. They use a "sealed review" page and every view
   (and every private attachment opened) is written to the audit log. Change this if you disagree.
+- Legal pages assume: 18+, NSW law, contact@uniteideas.org (set CONTACT_EMAIL). All unconfirmed, listed in docs/LEGAL_QUESTIONS.md.

@@ -353,6 +353,23 @@ def main() -> None:
         refused = anon.post("/login", data={"email": "agentbob@system.invalid"}, follow_redirects=False)
         check("AgentBob cannot sign in", "cannot+sign+in" in refused.headers.get("location", ""))
 
+        # --- legal pages -----------------------------------------------------
+        for path, needle in (("/terms", "Terms of use"), ("/privacy", "Privacy policy"), ("/community-rules", "Community rules")):
+            page_text = anon.get(path)
+            check(f"{path} renders", page_text.status_code == 200 and needle in page_text.text)
+            check(f"{path} is marked as a draft", "not legal advice" in page_text.text)
+        check("sign-up links to the terms", "/terms" in anon.get("/login").text)
+        from app.db import SessionLocal  # noqa: E402
+        from app.models import User as UserRow  # noqa: E402
+
+        with SessionLocal() as _db:
+            _owner = _db.query(UserRow).filter_by(email="owner@example.com").one()
+            check(
+                "acceptance of the terms is recorded at sign-up",
+                _owner.terms_version.startswith("draft-") and _owner.terms_accepted_at is not None,
+            )
+        check("footer links to the legal pages", "/privacy" in anon.get("/").text)
+
         # --- roles, audit, suspension ----------------------------------------
         def status(client, path):
             return client.get(path, follow_redirects=False).status_code

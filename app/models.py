@@ -78,6 +78,8 @@ class User(Base):
     hours_per_week: Mapped[int] = mapped_column(Integer, default=0)
     profile_public: Mapped[bool] = mapped_column(Boolean, default=True)
     profile_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    terms_version: Mapped[str] = mapped_column(String(40), default="")
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     ideas: Mapped[list["Idea"]] = relationship(back_populates="owner")
     skills: Mapped[list["UserSkill"]] = relationship(

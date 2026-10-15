@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="legal">
+  <p class="flash bad legal-draft">
+    <strong>Draft for review.</strong> This page was written to describe how UniteIdeas works today.
+    It has not been checked by a lawyer and is not legal advice. It will change before launch.
+  </p>
+  <h1>{% block legal_title %}{% endblock %}</h1>
+  <p class="meta">Version {{ legal_version }}. Last updated {{ legal_updated }}.</p>
+  {% block legal_body %}{% endblock %}
+  <p class="fine legal-foot">
+    Questions about this page: <a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a>.
+    See also:
+    <a href="/terms">Terms</a> ·
+    <a href="/privacy">Privacy</a> ·
+    <a href="/community-rules">Community rules</a>
+  </p>
+</article>
+{% endblock %}

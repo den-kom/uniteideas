@@ -10,9 +10,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import mailer
-from app.config import base_url_for, get_settings
+from app.config import LEGAL_VERSION, base_url_for, get_settings
 from app.db import get_db
-from app.models import ROLE_ADMIN, ROLE_BOT, ROLE_USER, User
+from app.models import ROLE_ADMIN, ROLE_BOT, ROLE_USER, User, utc_now
 from app.system_users import is_system_email
 from app.security import (
     SESSION_COOKIE,
@@ -89,6 +89,8 @@ def verify(
             email=email,
             display_name=(display_name.strip() or email.split("@")[0])[:80],
             role=ROLE_ADMIN if is_first else ROLE_USER,
+            terms_version=LEGAL_VERSION,
+            terms_accepted_at=utc_now(),
         )
         db.add(user)
         db.commit()
