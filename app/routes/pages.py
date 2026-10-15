@@ -31,6 +31,19 @@ def _published(stmt):
     return stmt.where(Idea.status == "published")
 
 
+def _backed_ids(db: Session, user: User | None, ideas) -> set[str]:
+    """Which of these ideas the signed-in user already backs."""
+    if user is None or not ideas:
+        return set()
+    return set(
+        db.scalars(
+            select(Vote.idea_id).where(
+                Vote.user_id == user.id, Vote.idea_id.in_([i.id for i in ideas])
+            )
+        ).all()
+    )
+
+
 @router.get("/")
 def home(
     request: Request,
@@ -38,12 +51,15 @@ def home(
     user: User | None = Depends(current_user),
 ):
     top = db.scalars(
-        _published(select(Idea)).order_by(desc(Idea.score), desc(Idea.created_at)).limit(6)
+        _published(select(Idea)).order_by(desc(Idea.score), desc(Idea.created_at)).limit(4)
     ).all()
     recent = db.scalars(
-        _published(select(Idea)).order_by(desc(Idea.created_at)).limit(6)
+        _published(select(Idea)).order_by(desc(Idea.created_at)).limit(4)
     ).all()
-    return render(request, "index.html", {"top": top, "recent": recent}, user=user)
+    backed = _backed_ids(db, user, list(top) + list(recent))
+    return render(
+        request, "index.html", {"top": top, "recent": recent, "backed": backed}, user=user
+    )
 
 
 @router.get("/ideas")
@@ -78,6 +94,7 @@ def feed(
             "filter_category": category,
             "sort": sort,
             "categories": categories,
+            "backed": _backed_ids(db, user, ideas),
         },
         user=user,
     )

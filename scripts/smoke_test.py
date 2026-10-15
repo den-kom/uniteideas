@@ -165,9 +165,33 @@ def main() -> None:
 
         voted = helper.post(f"/ideas/{idea_id}/vote", follow_redirects=False)
         check("upvote accepted", voted.status_code == 303)
-        again = helper.post(f"/ideas/{idea_id}/vote", follow_redirects=True)
-        check("second upvote refused", "already backed" in again.text)
-        check("score is exactly one", "Back this idea (1)" in helper.get(idea_url).text)
+        page_after = helper.get(f"/ideas/{idea_id}")
+        check("backed state shows on the idea page", "is-on" in page_after.text)
+        again = helper.post(
+            f"/ideas/{idea_id}/vote", headers={"Accept": "application/json"}
+        )
+        check(
+            "voting again takes the backing away",
+            again.json() == {"score": 0, "backed": False},
+            again.text,
+        )
+        back = helper.post(f"/ideas/{idea_id}/vote", headers={"Accept": "application/json"})
+        check("backing again restores it", back.json() == {"score": 1, "backed": True}, back.text)
+        offsite = helper.post(
+            f"/ideas/{idea_id}/vote",
+            data={"next": "https://evil.example/x"},
+            follow_redirects=False,
+        )
+        check(
+            "vote redirect never leaves the site",
+            offsite.headers["location"].startswith(f"/ideas/{idea_id}"),
+            offsite.headers["location"],
+        )
+        helper.post(f"/ideas/{idea_id}/vote")  # back to a backed state for later checks
+        check(
+            "score is exactly one",
+            'data-count>1</span>' in helper.get(idea_url).text,
+        )
 
         joined = helper.post(
             f"/ideas/{idea_id}/join",

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_ideas.html" import backers with context %}
 {% block title %}{{ idea.title }} — UniteIdeas{% endblock %}
 {% block content %}
 
@@ -23,14 +24,13 @@
   <h1>{{ idea.title }}</h1>
   <p class="lede">{{ idea.summary }}</p>
 
-  <div class="row">
-    <form method="post" action="/ideas/{{ idea.id }}/vote" class="inline">
-      <button class="btn" {% if has_voted or not user %}disabled{% endif %}>
-        Back this idea ({{ idea.score }})
-      </button>
-    </form>
-    {% if not user %}<span class="hint">Sign in to back or join.</span>{% endif %}
-    {% if has_voted %}<span class="hint">You backed this.</span>{% endif %}
+  <div class="row backers-row">
+    {% if idea.status == 'published' %}{{ backers(idea, has_voted, "/ideas/" ~ idea.id) }}{% endif %}
+    <p class="hint backers-hint">
+      {% if not user %}<a href="/login">Sign in</a> to back this idea or ask to join the team.
+      {% elif has_voted %}You back this idea. Click the button again to take it back.
+      {% else %}Backing shows the author that people want this built.{% endif %}
+    </p>
   </div>
 
   <section class="progress">

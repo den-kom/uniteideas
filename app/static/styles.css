@@ -46,7 +46,7 @@ body {
 a { color: var(--link); }
 
 main {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 32px 20px 64px;
 }
@@ -131,10 +131,6 @@ h3 { font-size: 17px; margin: 0 0 6px; }
 .prose { white-space: pre-wrap; }
 code { background: var(--line); padding: 1px 5px; border-radius: 5px; font-size: 13px; word-break: break-all; }
 
-/* ---------- hero ---------- */
-.hero { padding: 24px 0 8px; }
-.hero h1 { font-size: 40px; }
-.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -180,29 +176,6 @@ button.link:hover { color: var(--ink); text-decoration: underline; }
 .ok-card { background: var(--ok-bg); border-color: #a7f3d0; }
 .bad-card { background: var(--bad-bg); border-color: #fecaca; }
 
-.idea-list { display: flex; flex-direction: column; gap: 12px; }
-.idea-card {
-  display: flex;
-  gap: 16px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-}
-.idea-card .score {
-  min-width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: var(--line);
-  color: var(--ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-.idea-card h3 { margin: 0 0 4px; }
-.idea-card h3 a { text-decoration: none; }
-.idea-card p:last-child { margin: 0; }
 
 .pill {
   display: inline-block;
@@ -308,7 +281,7 @@ ul.plain li { padding: 9px 0; border-bottom: 1px solid var(--line); }
 }
 
 .footer {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 24px 20px 48px;
   border-top: 1px solid var(--line);
@@ -321,7 +294,130 @@ ul.plain li { padding: 9px 0; border-bottom: 1px solid var(--line); }
 }
 
 @media (max-width: 600px) {
-  .hero h1 { font-size: 30px; }
   .two-up { grid-template-columns: 1fr; }
   .proof-box dl, .card dl { grid-template-columns: 1fr; }
+}
+
+/* =====================================================================
+   v2 — hero, receipt, backers control, idea cards
+   ===================================================================== */
+h1 { font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-weight: 700; letter-spacing: -0.01em; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+
+.page-head, .section-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.page-head { align-items: center; margin-bottom: 18px; }
+.page-head h1 { margin: 0; }
+.section-head h2 { margin-bottom: 12px; }
+.section-head a { font-size: 14px; }
+
+/* hero */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 40px;
+  align-items: center;
+  padding: 28px 0 24px;
+}
+.hero h1 { font-size: clamp(34px, 5.2vw, 56px); line-height: 1.04; margin: 0 0 16px; }
+.hero .lede { max-width: 34em; margin: 0; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+.hero-note { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+
+/* the example receipt: the one memorable object on the page */
+.receipt {
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px 6px 14px 14px;
+  padding: 18px 20px 14px;
+  position: relative;
+  transform: rotate(1.2deg);
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.55);
+}
+.receipt::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -9px; height: 10px;
+  background:
+    linear-gradient(135deg, var(--card) 50%, transparent 50%) 0 0 / 14px 10px repeat-x,
+    linear-gradient(225deg, var(--card) 50%, transparent 50%) 0 0 / 14px 10px repeat-x;
+}
+.receipt-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.receipt-stamp {
+  color: var(--accent); border: 2px solid var(--accent); border-radius: 6px;
+  padding: 1px 9px; font-weight: 800; font-size: 14px; transform: rotate(-3deg);
+}
+.receipt-time { color: var(--muted); font-size: 13px; }
+.receipt-title { font-weight: 700; font-size: 18px; line-height: 1.3; margin: 14px 0 10px; }
+.receipt-rows { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0 0 12px; font-size: 14px; }
+.receipt-rows dt { color: var(--muted); }
+.receipt-rows dd { margin: 0; text-align: right; }
+.receipt figcaption { border-top: 1px dashed var(--line); padding-top: 10px; font-size: 12.5px; color: var(--muted); }
+
+/* backers: the vote control (arrow, number, word) */
+.backers {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  margin: 0;
+}
+.backers button, a.backers {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  width: 64px; min-height: 76px; padding: 6px 4px;
+  background: var(--bg); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 12px;
+  cursor: pointer; text-decoration: none; font: inherit;
+  transition: background .15s, color .15s, border-color .15s, transform .08s;
+}
+.backers button:hover, a.backers:hover { border-color: var(--accent); color: var(--accent); }
+.backers button:active { transform: translateY(1px); }
+.backers svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.backers-count { font-size: 20px; font-weight: 800; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.backers-label { font-size: 11.5px; line-height: 1.2; }
+.backers.is-on button { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.backers.is-on svg { fill: currentColor; }
+.backers.is-on .backers-count { color: var(--accent-ink); }
+.backers.is-busy { opacity: .6; pointer-events: none; }
+
+/* idea cards */
+.idea-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.idea-card {
+  display: flex; gap: 16px; align-items: flex-start;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 18px 14px 14px;
+}
+.idea-card:target { border-color: var(--accent); }
+.idea-main { min-width: 0; flex: 1; }
+.idea-card h3 { font-size: 18px; line-height: 1.3; margin: 2px 0 4px; }
+.idea-card h3 a { color: var(--ink); text-decoration: none; }
+.idea-card h3 a:hover { color: var(--accent); text-decoration: underline; }
+.idea-summary { margin: 0 0 10px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.chip {
+  display: inline-block; padding: 1px 10px; border-radius: 999px; font-size: 12.5px; line-height: 1.7;
+  background: transparent; border: 1px solid var(--line); color: var(--muted); text-decoration: none;
+}
+a.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip-digital { border-color: color-mix(in srgb, var(--blue) 55%, var(--line)); color: var(--link); }
+.chip-physical { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); color: var(--accent); }
+.chip-seal { border-style: dashed; }
+.chip-plain { border-color: transparent; padding-left: 2px; }
+
+.empty-block { background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius); padding: 22px; color: var(--muted); }
+.empty-block h2 { margin-top: 0; color: var(--ink); }
+
+@media (max-width: 800px) {
+  .hero { grid-template-columns: 1fr; gap: 28px; }
+  .receipt { transform: none; max-width: 440px; }
+}
+@media (max-width: 520px) {
+  .idea-card { gap: 12px; padding: 12px; }
+  .backers button, a.backers { width: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  .receipt { transform: none; }
 }

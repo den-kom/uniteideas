@@ -171,28 +171,61 @@ async def submit_idea(
     return RedirectResponse(f"/ideas/{idea_id}?msg={note}", status_code=303)
 
 
+def _safe_next(value: str, fallback: str) -> str:
+    """Only allow redirects to a path on this site."""
+    if value.startswith("/") and not value.startswith("//") and "\\" not in value:
+        return value
+    return fallback
+
+
 @router.post("/ideas/{idea_id}/vote")
 def vote(
+    request: Request,
     idea_id: str,
+    next: str = Form(default=""),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """Back an idea, or take your backing away if you already gave it."""
+    wants_json = "application/json" in (request.headers.get("accept") or "")
     idea = db.get(Idea, idea_id)
     if idea is None or idea.status != "published":
+        if wants_json:
+            return JSONResponse({"error": "not found"}, status_code=404)
         return RedirectResponse("/ideas?err=Idea+not+found", status_code=303)
-    db.add(Vote(idea_id=idea_id, user_id=user.id))
+
+    existing = db.scalar(
+        select(Vote).where(Vote.idea_id == idea_id, Vote.user_id == user.id)
+    )
+    if existing is not None:
+        db.delete(existing)
+        backed = False
+        note = "Backing+removed"
+    else:
+        db.add(Vote(idea_id=idea_id, user_id=user.id))
+        backed = True
+        note = "Thanks+for+backing+this+idea"
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        return RedirectResponse(
-            f"/ideas/{idea_id}?err=You+have+already+backed+this+idea", status_code=303
-        )
-    idea.score = (idea.score or 0) + 1
+        backed = True
+        note = "You+already+back+this+idea"
+    # The count is derived from the votes themselves, so it cannot drift.
+    idea.score = db.scalar(select(func.count(Vote.id)).where(Vote.idea_id == idea_id)) or 0
     idea.updated_at = utc_now()
     db.add(idea)
     db.commit()
-    return RedirectResponse(f"/ideas/{idea_id}?msg=Thanks+for+backing+this+idea", status_code=303)
+
+    if wants_json:
+        return JSONResponse({"score": idea.score, "backed": backed})
+    target = _safe_next(next, f"/ideas/{idea_id}").split("#")[0]
+    path, _, query = target.partition("?")
+    kept = [
+        pair for pair in query.split("&") if pair and pair.split("=")[0] not in {"msg", "err"}
+    ]
+    kept.append(f"msg={note}")
+    return RedirectResponse(f"{path}?{'&'.join(kept)}#idea-{idea_id}", status_code=303)
 
 
 @router.post("/ideas/{idea_id}/reveal")
