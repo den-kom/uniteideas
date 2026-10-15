@@ -26,7 +26,8 @@ from app.models import (
     utc_now,
 )
 from app.proof import build_receipt, compute_content_hash, sha256_bytes, sha256_text
-from app import timestamping
+from app import audit, timestamping
+from app.permissions import can
 from app.sealing import seal, unseal
 from app.verification import canonical_for
 from app.security import current_user, require_user
@@ -402,7 +403,6 @@ def download_attachment(
     if not allowed and user is not None:
         allowed = (
             user.id == idea.owner_id
-            or user.is_staff
             or db.scalar(
                 select(TeamMember).where(
                     TeamMember.idea_id == idea.id, TeamMember.user_id == user.id
@@ -410,6 +410,11 @@ def download_attachment(
             )
             is not None
         )
+        if not allowed and can(user, "sealed.review"):
+            # Staff may open a private attachment to judge it, and it is always recorded.
+            audit.record(db, user, "attachment.viewed", "attachment", att.id, att.filename)
+            db.commit()
+            allowed = True
     if not allowed:
         return JSONResponse({"error": "forbidden"}, status_code=403)
     return FileResponse(att.stored_path, media_type=att.content_type, filename=att.filename)

@@ -353,6 +353,64 @@ def main() -> None:
         refused = anon.post("/login", data={"email": "agentbob@system.invalid"}, follow_redirects=False)
         check("AgentBob cannot sign in", "cannot+sign+in" in refused.headers.get("location", ""))
 
+        # --- roles, audit, suspension ----------------------------------------
+        def status(client, path):
+            return client.get(path, follow_redirects=False).status_code
+
+        check("a member cannot open the moderation queue", status(helper, "/moderation") == 403)
+        check("a member cannot open the admin area", status(helper, "/admin") == 403)
+
+        with TestClient(app) as mod:
+            sign_in(mod, "mod@example.com", "Mo Derator")
+            mod_id = mod.get("/profile").text.split("/u/")[1].split('"')[0]
+            check("a new account starts as a plain member", status(mod, "/moderation") == 403)
+            promoted = owner.post(
+                f"/admin/users/{mod_id}/role", data={"role": "moderator"}, follow_redirects=True
+            )
+            check("admin can promote a moderator", "Role updated" in promoted.text)
+            check("moderator can open the queue", status(mod, "/moderation") == 200)
+            check("moderator cannot open the admin home", status(mod, "/admin") == 403)
+            check("moderator cannot list accounts", status(mod, "/admin/users") == 403)
+            check("moderator cannot read the audit log", status(mod, "/admin/audit") == 403)
+            check("moderator cannot change roles", mod.post(f"/admin/users/{mod_id}/role", data={"role": "admin"}).status_code == 403)
+            check("moderator cannot suspend accounts", mod.post(f"/admin/users/{mod_id}/status", data={"action": "suspend", "reason": "x"}).status_code == 403)
+
+            check("sealed text is not shown to staff just by browsing", "Injection-moulded TPU" not in mod.get(idea_url).text)
+            review = mod.get(f"/moderation/ideas/{idea_id}/sealed")
+            check("staff can open the logged sealed review", review.status_code == 200 and "Injection-moulded TPU" in review.text)
+            check("a member cannot use the sealed review", status(helper, f"/moderation/ideas/{idea_id}/sealed") == 403)
+            attachment_id = re.search(r"/files/(file-[0-9a-f]+)", mod.get(idea_url).text).group(1)
+            check("staff can open a private attachment", mod.get(f"/files/{attachment_id}").status_code == 200)
+
+            audit_page = owner.get("/admin/audit").text
+            check("role change is in the audit log", "user.role_change" in audit_page and "user to moderator" in audit_page)
+            check("sealed view is in the audit log", "sealed.viewed" in audit_page)
+            check("attachment view is in the audit log", "attachment.viewed" in audit_page)
+            check("audit log can be filtered", "sealed.viewed" in owner.get("/admin/audit?action=sealed.viewed").text and "user.role_change" not in owner.get("/admin/audit?action=sealed.viewed").text.split("<tbody>")[1])
+
+            check("admin home loads", status(owner, "/admin") == 200)
+            check("timestamp page loads", status(owner, "/admin/timestamps") == 200)
+            check("user search works", "Mo Derator" in owner.get("/admin/users?q=mo+der").text and "Willing Helper" not in owner.get("/admin/users?q=mo+der").text)
+
+            blank = owner.post(f"/admin/users/{mod_id}/status", data={"action": "suspend", "reason": " "}, follow_redirects=True)
+            check("suspension needs a reason", "Give a reason" in blank.text)
+            owner.post(f"/admin/users/{mod_id}/status", data={"action": "suspend", "reason": "Spam in comments"})
+            check("a suspended moderator loses access", status(mod, "/moderation") in {303, 401})
+            link_page = TestClient(app).post("/login", data={"email": "mod@example.com"})
+            relink = html.unescape(LINK_RE.search(link_page.text).group(1)).replace("http://testserver", "")
+            back = TestClient(app).get(relink, follow_redirects=False)
+            check("a suspended account cannot sign back in", "suspended" in back.headers.get("location", ""))
+            check("suspension is in the audit log with its reason", "Spam in comments" in owner.get("/admin/audit").text)
+            owner.post(f"/admin/users/{mod_id}/status", data={"action": "reactivate"})
+            check("a reactivated moderator works again", status(mod, "/moderation") == 200)
+
+        me = owner.get("/profile").text.split("/u/")[1].split('"')[0]
+        own = owner.post(f"/admin/users/{me}/role", data={"role": "user"}, follow_redirects=True)
+        check("an admin cannot demote themselves", "cannot remove your own admin role" in own.text)
+        check("an admin cannot suspend themselves", "cannot suspend yourself" in owner.post(f"/admin/users/{me}/status", data={"action": "suspend", "reason": "x"}, follow_redirects=True).text)
+        bot_role = owner.post("/admin/users/user-agentbob/role", data={"role": "admin"}, follow_redirects=True)
+        check("robot accounts cannot be edited", "Robot accounts cannot be changed" in bot_role.text)
+
     check_base_url_resolution()
     print(f"\n{len(PASSED)} checks passed")
 

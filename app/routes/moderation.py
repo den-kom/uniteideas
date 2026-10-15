@@ -1,4 +1,4 @@
-"""Reporting, moderator queue, and admin role management."""
+"""Reporting and the moderator queue. Account management lives in admin.py."""
 
 from __future__ import annotations
 
@@ -9,9 +9,6 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import (
-    ROLE_ADMIN,
-    ROLE_MODERATOR,
-    ROLE_USER,
     STATUS_PENDING,
     STATUS_PUBLISHED,
     STATUS_REMOVED,
@@ -20,7 +17,10 @@ from app.models import (
     User,
     utc_now,
 )
-from app.security import require_admin, require_staff, require_user
+from app import audit
+from app.permissions import require_permission
+from app.sealing import unseal
+from app.security import require_user
 from app.templating import render
 
 router = APIRouter()
@@ -51,7 +51,7 @@ def report_idea(
 def queue(
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_staff),
+    user: User = Depends(require_permission("ideas.review")),
 ):
     pending_ideas = db.scalars(
         select(Idea).where(Idea.status == STATUS_PENDING).order_by(Idea.created_at)
@@ -89,7 +89,7 @@ def queue(
 def approve_idea(
     idea_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_staff),
+    user: User = Depends(require_permission("ideas.review")),
 ):
     idea = db.get(Idea, idea_id)
     if idea is None:
@@ -100,6 +100,7 @@ def approve_idea(
     idea.published_at = utc_now()
     idea.updated_at = utc_now()
     db.add(idea)
+    audit.record(db, user, "idea.approve", "idea", idea.id, idea.title)
     db.commit()
     return RedirectResponse("/moderation?msg=Idea+approved+and+published", status_code=303)
 
@@ -109,7 +110,7 @@ def reject_idea(
     idea_id: str,
     note: str = Form(default=""),
     db: Session = Depends(get_db),
-    user: User = Depends(require_staff),
+    user: User = Depends(require_permission("ideas.review")),
 ):
     idea = db.get(Idea, idea_id)
     if idea is None:
@@ -118,6 +119,7 @@ def reject_idea(
     idea.review_note = note.strip()[:2000]
     idea.updated_at = utc_now()
     db.add(idea)
+    audit.record(db, user, "idea.reject", "idea", idea.id, note.strip()[:200])
     db.commit()
     return RedirectResponse("/moderation?msg=Idea+rejected", status_code=303)
 
@@ -144,6 +146,14 @@ def _resolve(
             idea.status = STATUS_REMOVED
             idea.updated_at = utc_now()
             db.add(idea)
+    audit.record(
+        db,
+        staff,
+        "report.remove_idea" if remove_idea else "report.dismiss",
+        "report",
+        report.id,
+        f"idea {report.idea_id}: {note.strip()[:200]}",
+    )
     db.commit()
     return RedirectResponse("/moderation?msg=Report+resolved", status_code=303)
 
@@ -153,7 +163,7 @@ def dismiss(
     report_id: str,
     note: str = Form(default=""),
     db: Session = Depends(get_db),
-    user: User = Depends(require_staff),
+    user: User = Depends(require_permission("ideas.review")),
 ):
     return _resolve(db, report_id, user, remove_idea=False, note=note)
 
@@ -163,43 +173,25 @@ def remove_idea(
     report_id: str,
     note: str = Form(default=""),
     db: Session = Depends(get_db),
-    user: User = Depends(require_staff),
+    user: User = Depends(require_permission("ideas.review")),
 ):
     return _resolve(db, report_id, user, remove_idea=True, note=note)
 
 
-@router.get("/admin/users")
-def admin_users(
+@router.get("/moderation/ideas/{idea_id}/sealed")
+def review_sealed(
     request: Request,
+    idea_id: str,
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission("sealed.review")),
 ):
-    users = db.scalars(select(User).order_by(User.created_at)).all()
-    return render(
-        request,
-        "admin_users.html",
-        {"users": users, "roles": [ROLE_USER, ROLE_MODERATOR, ROLE_ADMIN]},
-        user=user,
-    )
-
-
-@router.post("/admin/users/{user_id}/role")
-def set_role(
-    user_id: str,
-    role: str = Form(...),
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
-):
-    if role not in {ROLE_USER, ROLE_MODERATOR, ROLE_ADMIN}:
-        return RedirectResponse("/admin/users?err=Unknown+role", status_code=303)
-    target = db.get(User, user_id)
-    if target is None:
-        return RedirectResponse("/admin/users?err=User+not+found", status_code=303)
-    if target.id == admin.id and role != ROLE_ADMIN:
-        return RedirectResponse(
-            "/admin/users?err=You+cannot+remove+your+own+admin+role", status_code=303
-        )
-    target.role = role
-    db.add(target)
+    """Staff can read an idea's sealed text when they have to judge it. Every view is logged."""
+    idea = db.get(Idea, idea_id)
+    if idea is None:
+        return RedirectResponse("/moderation?err=Idea+not+found", status_code=303)
+    audit.record(db, user, "sealed.viewed", "idea", idea.id, idea.title)
     db.commit()
-    return RedirectResponse("/admin/users?msg=Role+updated", status_code=303)
+    text = unseal(idea.sealed_blob) if idea.sealed_blob else ""
+    return render(
+        request, "sealed_review.html", {"idea": idea, "sealed_text": text}, user=user
+    )

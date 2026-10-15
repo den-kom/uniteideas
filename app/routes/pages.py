@@ -131,9 +131,8 @@ def idea_detail(
             )
         )
 
-    can_see_sealed = idea.sealed_is_public or is_owner or bool(member) or bool(
-        user and user.is_staff
-    )
+    # Staff do not get sealed text just by browsing. They use the logged review page.
+    can_see_sealed = idea.sealed_is_public or is_owner or bool(member)
     sealed_text = unseal(idea.sealed_blob) if (can_see_sealed and idea.sealed_blob) else ""
 
     pending_joins = []

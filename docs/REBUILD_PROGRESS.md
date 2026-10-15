@@ -9,7 +9,7 @@ Tests: `./test.sh`.
 - [x] M2 Homepage copy
 - [x] M3 Verify tied to ideas, timestamp queue (OpenTimestamps), Alembic migrations (0001 baseline, 0002 proof queue)
 - [x] M4 Sign-up questionnaire (goals, skills, hours), editable profile, public /u/{id} page, AgentBob (AI) system user (cannot sign in)
-- [ ] M5 Admin roles and audit log
+- [x] M5 Admin area (/admin), moderator vs admin permissions, suspend/reactivate, audit log, timestamp queue page, logged sealed review
 - [ ] M6 Terms, privacy, community rules (drafts)
 - [ ] M7 SEO and extra pages
 - [ ] M8 Placeholders (Unite Ideas, Unite Talent), hide POC request, final checks
@@ -35,3 +35,5 @@ Tests: `./test.sh`.
 ## Bugs found and fixed on the way
 - /profile crashed for anyone who had joined a team (it read a column that does not exist).
 - The first real sign-up becomes admin; the AgentBob account is excluded from that count.
+- Moderators no longer see sealed text just by opening an idea. They use a "sealed review" page and every view
+  (and every private attachment opened) is written to the audit log. Change this if you disagree.

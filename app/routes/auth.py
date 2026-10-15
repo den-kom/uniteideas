@@ -93,6 +93,8 @@ def verify(
         db.add(user)
         db.commit()
 
+    if not user.is_active:
+        return RedirectResponse("/login?err=This+account+is+suspended", status_code=303)
     if not user.profile_done:
         target = "/profile/edit?welcome=1"
     else:

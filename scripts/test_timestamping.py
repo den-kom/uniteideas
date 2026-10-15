@@ -233,10 +233,10 @@ def main() -> None:
         row = con.execute("select anchor_status from idea_proofs").fetchone()
         ver = con.execute("select version_num from alembic_version").fetchone()
     check("existing proofs are queued for a timestamp", row[0] == "pending_submit")
-    check("database is marked up to date", ver[0] == "0003", str(ver))
+    check("database is marked up to date", ver[0] == "0004", str(ver))
 
     fresh = sqlite3.connect(os.environ["DB_PATH"])
-    check("a new database is created at the latest version", fresh.execute("select version_num from alembic_version").fetchone()[0] == "0003")
+    check("a new database is created at the latest version", fresh.execute("select version_num from alembic_version").fetchone()[0] == "0004")
 
     print(f"\n{PASSED} checks passed")
 

@@ -293,3 +293,18 @@ class PocBuild(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     idea: Mapped[Idea] = relationship(back_populates="builds")
+
+
+class AuditLog(Base):
+    """Who did what, for staff actions that change or reveal something."""
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, index=True)
+    actor_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    actor_name: Mapped[str] = mapped_column(String(80), default="")  # kept if the account changes
+    action: Mapped[str] = mapped_column(String(60), index=True)
+    target_type: Mapped[str] = mapped_column(String(30), default="")
+    target_id: Mapped[str] = mapped_column(String(40), default="")
+    detail: Mapped[str] = mapped_column(String(500), default="")

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Timestamp queue — UniteIdeas admin{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Timestamp queue</h1><a href="/admin">Admin home</a></div>
+
+{% if not enabled %}
+<p class="flash bad">Public timestamps are switched off (TIMESTAMP_PROVIDER). New ideas are not being sent.</p>
+{% endif %}
+
+<p class="chips">
+  {% for state in ['pending_submit', 'pending_confirm', 'confirmed', 'failed', 'none'] %}
+  <span class="chip">{{ state|replace('_', ' ') }}: {{ counts.get(state, 0) }}</span>
+  {% endfor %}
+</p>
+
+<h2>Needs attention</h2>
+{% if problems %}
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Idea</th><th>State</th><th>Tries</th><th>Last error</th><th></th></tr></thead>
+  <tbody>
+  {% for p in problems %}
+  <tr>
+    <td><a href="/ideas/{{ p.idea_id }}">{{ p.idea_id }}</a></td>
+    <td>{{ p.anchor_status|replace('_', ' ') }}</td>
+    <td>{{ p.anchor_attempts }}</td>
+    <td class="fine">{{ p.anchor_error }}</td>
+    <td>
+      <form method="post" action="/admin/timestamps/{{ p.idea_id }}/requeue">
+        <button class="btn small ghost">Try again</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="hint">Nothing needs attention.</p>
+{% endif %}
+{% endblock %}
