@@ -56,8 +56,8 @@
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <path d="M32 18l5 11 12 2-9 8 2 12-10-6-10 6 2-12-9-8 12-2z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
       </svg>
-      <h3>4. Get backed</h3>
-      <p>Members back the ideas they want to see built. Backing shows real interest, not just views.</p>
+      <h3>4. Get votes</h3>
+      <p>Members vote on the ideas they want to see built. Votes show real interest, not just views.</p>
     </li>
     <li>
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
@@ -75,10 +75,21 @@
   <h2 id="soon-heading">Coming soon</h2>
   <div class="grid-3 soon-grid">
     <a class="soon-card" href="/unite-ideas">
+      <svg class="soon-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="18" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+        <circle cx="46" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
+        <circle cx="32" cy="46" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path d="M22 26l8 14M42 26l-8 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
       <h3>Unite Ideas</h3>
       <p>Finds ideas that overlap and suggests combining them, or spinning off your own version.</p>
     </a>
     <a class="soon-card" href="/unite-talent">
+      <svg class="soon-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="24" cy="22" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
+        <circle cx="44" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path d="M10 48c0-9 6-16 14-16s14 7 14 16M34 48c1-7 6-12 13-12s13 5 14 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
       <h3>Unite Talent</h3>
       <p>Suggests teammates whose skills fit your idea.</p>
     </a>
@@ -88,12 +99,12 @@
 {% if top %}
 <section>
   <div class="section-head">
-    <h2>Most backed</h2>
+    <h2>Most voted</h2>
     <a href="/ideas?sort=top">See all</a>
   </div>
   <div class="idea-list">
     {% for idea in top %}
-      {{ idea_card(idea, idea.id in backed, "/") }}
+      {{ idea_card(idea, my_votes.get(idea.id), "/") }}
     {% endfor %}
   </div>
 </section>
@@ -107,7 +118,7 @@
   </div>
   <div class="idea-list">
     {% for idea in recent %}
-      {{ idea_card(idea, idea.id in backed, "/") }}
+      {{ idea_card(idea, my_votes.get(idea.id), "/") }}
     {% endfor %}
   </div>
 </section>

@@ -182,11 +182,12 @@ def _safe_next(value: str, fallback: str) -> str:
 def vote(
     request: Request,
     idea_id: str,
+    direction: str = Form(default="up"),
     next: str = Form(default=""),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
 ):
-    """Back an idea, or take your backing away if you already gave it."""
+    """Up- or down-vote an idea. Voting the same way again takes the vote back."""
     wants_json = "application/json" in (request.headers.get("accept") or "")
     idea = db.get(Idea, idea_id)
     if idea is None or idea.status != "published":
@@ -194,31 +195,36 @@ def vote(
             return JSONResponse({"error": "not found"}, status_code=404)
         return RedirectResponse("/ideas?err=Idea+not+found", status_code=303)
 
+    wanted = 1 if direction != "down" else -1
     existing = db.scalar(
         select(Vote).where(Vote.idea_id == idea_id, Vote.user_id == user.id)
     )
-    if existing is not None:
+    if existing is not None and existing.value == wanted:
         db.delete(existing)
-        backed = False
-        note = "Backing+removed"
+        my_vote = None
+        note = "Vote+removed"
+    elif existing is not None:
+        existing.value = wanted
+        my_vote = direction
+        note = "Vote+changed"
     else:
-        db.add(Vote(idea_id=idea_id, user_id=user.id))
-        backed = True
-        note = "Thanks+for+backing+this+idea"
+        db.add(Vote(idea_id=idea_id, user_id=user.id, value=wanted))
+        my_vote = direction
+        note = "Thanks+for+voting"
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        backed = True
-        note = "You+already+back+this+idea"
-    # The count is derived from the votes themselves, so it cannot drift.
-    idea.score = db.scalar(select(func.count(Vote.id)).where(Vote.idea_id == idea_id)) or 0
+        my_vote = direction
+        note = "Vote+already+recorded"
+    # The score is derived from the votes themselves, so it cannot drift.
+    idea.score = db.scalar(select(func.coalesce(func.sum(Vote.value), 0)).where(Vote.idea_id == idea_id)) or 0
     idea.updated_at = utc_now()
     db.add(idea)
     db.commit()
 
     if wants_json:
-        return JSONResponse({"score": idea.score, "backed": backed})
+        return JSONResponse({"score": idea.score, "my_vote": my_vote})
     target = _safe_next(next, f"/ideas/{idea_id}").split("#")[0]
     path, _, query = target.partition("?")
     kept = [

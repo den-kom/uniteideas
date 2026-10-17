@@ -111,13 +111,14 @@
   })();
 </script>
 <script>
-  /* Back an idea without reloading the page. Falls back to a normal form post. */
+  /* Up/down vote an idea without reloading the page. Falls back to a normal form post. */
   (function () {
     document.addEventListener("submit", function (ev) {
       var form = ev.target;
-      if (!form.matches || !form.matches("form[data-backers]") || !window.fetch) return;
+      if (!form.matches || !form.matches("form.vote-btn-form") || !window.fetch) return;
       ev.preventDefault();
-      form.classList.add("is-busy");
+      var wrap = form.closest("[data-vote]");
+      if (wrap) wrap.classList.add("is-busy");
       fetch(form.action, {
         method: "POST",
         body: new FormData(form),
@@ -127,13 +128,16 @@
         if (!r.ok) throw new Error("vote failed");
         return r.json();
       }).then(function (data) {
-        form.classList.toggle("is-on", data.backed);
-        var btn = form.querySelector("button");
-        btn.setAttribute("aria-pressed", data.backed ? "true" : "false");
-        btn.setAttribute("aria-label", data.backed ? "Remove your backing" : "Back this idea");
-        form.querySelector("[data-count]").textContent = data.score;
-        form.querySelector(".backers-label").textContent = data.score === 1 ? "backer" : "backers";
-        form.classList.remove("is-busy");
+        if (!wrap) return;
+        wrap.querySelector("[data-score]").textContent = data.score;
+        wrap.querySelector("[data-score]").classList.toggle("is-negative", data.score < 0);
+        wrap.querySelectorAll(".vote-arrow").forEach(function (btn) {
+          var dir = btn.classList.contains("vote-up") ? "up" : "down";
+          var on = data.my_vote === dir;
+          btn.classList.toggle("is-on", on);
+          btn.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        wrap.classList.remove("is-busy");
       }).catch(function () {
         form.submit();
       });

@@ -211,7 +211,9 @@ def main() -> None:
             CREATE TABLE idea_proofs (id VARCHAR(40) PRIMARY KEY, idea_id VARCHAR(40), algorithm VARCHAR(30),
               content_hash VARCHAR(64), canonical_version VARCHAR(40), author_email_hash VARCHAR(64),
               anchor_provider VARCHAR(30), anchor_reference VARCHAR(200), anchored_at DATETIME, created_at DATETIME);
+            CREATE TABLE votes (id INTEGER PRIMARY KEY, idea_id VARCHAR(40), user_id VARCHAR(40), created_at DATETIME);
             INSERT INTO idea_proofs VALUES ('p1','i1','sha256','%s','v1','h','local','',NULL,'2026-01-01 00:00:00');
+            INSERT INTO votes (idea_id, user_id, created_at) VALUES ('i1','u1','2026-01-01 00:00:00');
             """
             % sha256_text("old")
         )
@@ -232,11 +234,13 @@ def main() -> None:
     with sqlite3.connect(legacy) as con:
         row = con.execute("select anchor_status from idea_proofs").fetchone()
         ver = con.execute("select version_num from alembic_version").fetchone()
+        vote_value = con.execute("select value from votes where idea_id = 'i1'").fetchone()
     check("existing proofs are queued for a timestamp", row[0] == "pending_submit")
-    check("database is marked up to date", ver[0] == "0005", str(ver))
+    check("existing votes become upvotes", vote_value[0] == 1, vote_value)
+    check("database is marked up to date", ver[0] == "0006", str(ver))
 
     fresh = sqlite3.connect(os.environ["DB_PATH"])
-    check("a new database is created at the latest version", fresh.execute("select version_num from alembic_version").fetchone()[0] == "0005")
+    check("a new database is created at the latest version", fresh.execute("select version_num from alembic_version").fetchone()[0] == "0006")
 
     print(f"\n{PASSED} checks passed")
 

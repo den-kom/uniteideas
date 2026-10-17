@@ -234,6 +234,7 @@ class Vote(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     idea_id: Mapped[str] = mapped_column(ForeignKey("ideas.id"), index=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    value: Mapped[int] = mapped_column(Integer, default=1)  # 1 = up, -1 = down
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 

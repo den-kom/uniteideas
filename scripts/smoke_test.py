@@ -196,23 +196,33 @@ def main() -> None:
         sign_in(helper, "helper@example.com", "Willing Helper")
         helper.post("/onboarding/complete")
 
-        voted = helper.post(f"/ideas/{idea_id}/vote", follow_redirects=False)
+        voted = helper.post(f"/ideas/{idea_id}/vote", data={"direction": "up"}, follow_redirects=False)
         check("upvote accepted", voted.status_code == 303)
         page_after = helper.get(f"/ideas/{idea_id}")
-        check("backed state shows on the idea page", "is-on" in page_after.text)
+        check("upvoted state shows on the idea page", "vote-up is-on" in page_after.text)
         again = helper.post(
-            f"/ideas/{idea_id}/vote", headers={"Accept": "application/json"}
+            f"/ideas/{idea_id}/vote", data={"direction": "up"}, headers={"Accept": "application/json"}
         )
         check(
-            "voting again takes the backing away",
-            again.json() == {"score": 0, "backed": False},
+            "upvoting again takes the vote away",
+            again.json() == {"score": 0, "my_vote": None},
             again.text,
         )
-        back = helper.post(f"/ideas/{idea_id}/vote", headers={"Accept": "application/json"})
-        check("backing again restores it", back.json() == {"score": 1, "backed": True}, back.text)
+        down = helper.post(
+            f"/ideas/{idea_id}/vote", data={"direction": "down"}, headers={"Accept": "application/json"}
+        )
+        check("a downvote lowers the score", down.json() == {"score": -1, "my_vote": "down"}, down.text)
+        switched = helper.post(
+            f"/ideas/{idea_id}/vote", data={"direction": "up"}, headers={"Accept": "application/json"}
+        )
+        check(
+            "switching from down to up swings the score by two",
+            switched.json() == {"score": 1, "my_vote": "up"},
+            switched.text,
+        )
         offsite = helper.post(
             f"/ideas/{idea_id}/vote",
-            data={"next": "https://evil.example/x"},
+            data={"direction": "up", "next": "https://evil.example/x"},
             follow_redirects=False,
         )
         check(
@@ -220,10 +230,10 @@ def main() -> None:
             offsite.headers["location"].startswith(f"/ideas/{idea_id}"),
             offsite.headers["location"],
         )
-        helper.post(f"/ideas/{idea_id}/vote")  # back to a backed state for later checks
+        helper.post(f"/ideas/{idea_id}/vote", data={"direction": "up"})  # the offsite check toggled it off; put it back
         check(
-            "score is exactly one",
-            'data-count>1</span>' in helper.get(idea_url).text,
+            "score badge shows the net score",
+            'data-score>1</span>' in helper.get(idea_url).text,
         )
 
         joined = helper.post(

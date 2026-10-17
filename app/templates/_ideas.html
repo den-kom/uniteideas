@@ -1,29 +1,38 @@
-{# Shared idea components. Import with: {% from "_ideas.html" import backers, idea_card with context %} #}
+{# Shared idea components. Import with: {% from "_ideas.html" import vote_arrows, idea_card with context %} #}
 
-{% macro backers(idea, backed=False, next_url="/") %}
-{% if user %}
-<form method="post" action="/ideas/{{ idea.id }}/vote" class="backers{% if backed %} is-on{% endif %}" data-backers>
-  <input type="hidden" name="next" value="{{ next_url }}" />
-  <button type="submit" aria-pressed="{{ 'true' if backed else 'false' }}"
-          aria-label="{{ 'Remove your backing' if backed else 'Back this idea' }}"
-          title="{{ 'You back this. Click to remove.' if backed else 'Back this idea' }}">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 8h-4.5v6h-5v-6H5z" /></svg>
-    <span class="backers-count" data-count>{{ idea.score }}</span>
-    <span class="backers-label">{{ 'backer' if idea.score == 1 else 'backers' }}</span>
-  </button>
-</form>
-{% else %}
-<a class="backers" href="/login" title="Sign in to back this idea">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 8h-4.5v6h-5v-6H5z" /></svg>
-  <span class="backers-count">{{ idea.score }}</span>
-  <span class="backers-label">{{ 'backer' if idea.score == 1 else 'backers' }}</span>
-</a>
-{% endif %}
+{% macro vote_arrows(idea, my_vote=None, next_url="/") %}
+<div class="vote" data-vote>
+  <span class="vote-score{{ ' is-negative' if idea.score < 0 else '' }}" data-score>{{ idea.score }}</span>
+  {% if user %}
+  <form method="post" action="/ideas/{{ idea.id }}/vote" class="vote-btn-form">
+    <input type="hidden" name="direction" value="up" />
+    <input type="hidden" name="next" value="{{ next_url }}" />
+    <button type="submit" class="vote-arrow vote-up{{ ' is-on' if my_vote == 'up' else '' }}"
+            aria-pressed="{{ 'true' if my_vote == 'up' else 'false' }}" aria-label="Upvote this idea" title="Upvote">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6l7 9H5z" /></svg>
+    </button>
+  </form>
+  <form method="post" action="/ideas/{{ idea.id }}/vote" class="vote-btn-form">
+    <input type="hidden" name="direction" value="down" />
+    <input type="hidden" name="next" value="{{ next_url }}" />
+    <button type="submit" class="vote-arrow vote-down{{ ' is-on' if my_vote == 'down' else '' }}"
+            aria-pressed="{{ 'true' if my_vote == 'down' else 'false' }}" aria-label="Downvote this idea" title="Downvote">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18l-7-9h14z" /></svg>
+    </button>
+  </form>
+  {% else %}
+  <a class="vote-arrow vote-up" href="/login" title="Sign in to vote" aria-label="Sign in to upvote">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6l7 9H5z" /></svg>
+  </a>
+  <a class="vote-arrow vote-down" href="/login" title="Sign in to vote" aria-label="Sign in to downvote">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18l-7-9h14z" /></svg>
+  </a>
+  {% endif %}
+</div>
 {% endmacro %}
 
-{% macro idea_card(idea, backed=False, next_url="/") %}
+{% macro idea_card(idea, my_vote=None, next_url="/") %}
 <article class="idea-card" id="idea-{{ idea.id }}">
-  {{ backers(idea, backed, next_url) }}
   <div class="idea-main">
     <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
     <p class="idea-summary">{{ idea.summary }}</p>
@@ -34,5 +43,6 @@
       <span class="chip chip-plain">{{ idea.created_at.strftime('%d %b %Y') }}</span>
     </p>
   </div>
+  {{ vote_arrows(idea, my_vote, next_url) }}
 </article>
 {% endmacro %}

@@ -24,7 +24,7 @@
     {% for idea in my_ideas %}
     <li>
       <a href="/ideas/{{ idea.id }}">{{ idea.title }}</a>
-      <span class="fine">{{ idea.score }} backers
+      <span class="fine">{{ idea.score }} net vote{{ '' if idea.score == 1 else 's' }}
         {% if idea.status != 'published' %}&middot; {{ idea.status }}{% endif %}</span>
     </li>
     {% endfor %}

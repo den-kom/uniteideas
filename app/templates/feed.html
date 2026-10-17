@@ -29,7 +29,7 @@
   </label>
   <label>Sort
     <select name="sort">
-      <option value="top" {% if sort == 'top' %}selected{% endif %}>Most backed</option>
+      <option value="top" {% if sort == 'top' %}selected{% endif %}>Most voted</option>
       <option value="new" {% if sort == 'new' %}selected{% endif %}>Newest</option>
     </select>
   </label>
@@ -38,7 +38,7 @@
 
 <div class="idea-list">
   {% for idea in ideas %}
-    {{ idea_card(idea, idea.id in backed, request.url.path ~ ('?' ~ request.url.query if request.url.query else '')) }}
+    {{ idea_card(idea, my_votes.get(idea.id), request.url.path ~ ('?' ~ request.url.query if request.url.query else '')) }}
   {% else %}
   <div class="empty-block">
     <p>No ideas match those filters yet.</p>
