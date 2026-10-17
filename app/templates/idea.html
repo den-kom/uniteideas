@@ -62,6 +62,7 @@
       </li>
     </ol>
     <p class="fingerprint">Fingerprint <code>{{ proof.content_hash }}</code></p>
+    {% if is_owner %}
     <p class="row">
       <a class="btn small" href="/ideas/{{ idea.id }}/proof-bundle.json">Download receipt</a>
       {% if proof.anchor_proof %}<a class="btn small ghost" href="/ideas/{{ idea.id }}/proof.ots">Timestamp file</a>{% endif %}
@@ -70,6 +71,12 @@
     <p class="fine">
       Only the fingerprint leaves UniteIdeas. The sealed text stays private; the receipt holds its fingerprint, not the text.
     </p>
+    {% else %}
+    <p class="fine">
+      Only the fingerprint leaves UniteIdeas. The sealed text stays private; the receipt holds its fingerprint, not the text.
+      Downloading and checking the receipt is available to {{ idea.owner.display_name }} on this page when signed in.
+    </p>
+    {% endif %}
     {% else %}
     <p>No proof record for this idea.</p>
     {% endif %}
