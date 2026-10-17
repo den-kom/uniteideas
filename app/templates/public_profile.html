@@ -41,7 +41,7 @@
   <h2>Ideas</h2>
   {% if ideas %}
   <div class="idea-list">
-    {% for idea in ideas %}{{ idea_card(idea, False, "/u/" ~ member.id) }}{% endfor %}
+    {% for idea in ideas %}{{ idea_card(idea, my_votes.get(idea.id), "/u/" ~ member.id) }}{% endfor %}
   </div>
   {% else %}
   <p class="hint">No published ideas yet.</p>

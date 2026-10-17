@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Idea, User, UserSkill
+from app.routes.pages import _my_votes
 from app.security import current_user, require_user
 from app.skills import GOALS, SKILL_GROUPS, SKILL_LABELS, clean_goals, clean_skills
 from app.templating import render
@@ -104,6 +105,7 @@ def public_profile(
         {
             "member": member,
             "ideas": ideas,
+            "my_votes": _my_votes(db, viewer, ideas),
             "skill_labels": SKILL_LABELS,
             "goals": GOALS,
             "is_self": bool(viewer and viewer.id == member.id),

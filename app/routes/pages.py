@@ -35,17 +35,16 @@ def _published(stmt):
     return stmt.where(Idea.status == "published")
 
 
-def _backed_ids(db: Session, user: User | None, ideas) -> set[str]:
-    """Which of these ideas the signed-in user already backs."""
+def _my_votes(db: Session, user: User | None, ideas) -> dict[str, str]:
+    """Idea id -> "up"/"down" for ideas this signed-in user has voted on."""
     if user is None or not ideas:
-        return set()
-    return set(
-        db.scalars(
-            select(Vote.idea_id).where(
-                Vote.user_id == user.id, Vote.idea_id.in_([i.id for i in ideas])
-            )
-        ).all()
-    )
+        return {}
+    rows = db.execute(
+        select(Vote.idea_id, Vote.value).where(
+            Vote.user_id == user.id, Vote.idea_id.in_([i.id for i in ideas])
+        )
+    ).all()
+    return {idea_id: ("up" if value > 0 else "down") for idea_id, value in rows}
 
 
 @router.get("/")
@@ -60,9 +59,9 @@ def home(
     recent = db.scalars(
         _published(select(Idea)).order_by(desc(Idea.created_at)).limit(4)
     ).all()
-    backed = _backed_ids(db, user, list(top) + list(recent))
+    my_votes = _my_votes(db, user, list(top) + list(recent))
     return render(
-        request, "index.html", {"top": top, "recent": recent, "backed": backed}, user=user
+        request, "index.html", {"top": top, "recent": recent, "my_votes": my_votes}, user=user
     )
 
 
@@ -114,7 +113,7 @@ def feed(
             "filter_category": category,
             "sort": sort,
             "categories": categories,
-            "backed": _backed_ids(db, user, ideas),
+            "my_votes": _my_votes(db, user, ideas),
             "page": page,
             "pages": pages,
             "canonical_url": canonical,
@@ -170,14 +169,13 @@ def idea_detail(
             )
         ).all()
 
-    has_voted = False
+    my_vote = None
     if user:
-        has_voted = (
-            db.scalar(
-                select(Vote).where(Vote.idea_id == idea.id, Vote.user_id == user.id)
-            )
-            is not None
+        own_vote = db.scalar(
+            select(Vote).where(Vote.idea_id == idea.id, Vote.user_id == user.id)
         )
+        if own_vote is not None:
+            my_vote = "up" if own_vote.value > 0 else "down"
 
     members = db.scalars(select(TeamMember).where(TeamMember.idea_id == idea.id)).all()
     member_users = {
@@ -200,7 +198,7 @@ def idea_detail(
             "join_users": join_users,
             "members": members,
             "member_users": member_users,
-            "has_voted": has_voted,
+            "my_vote": my_vote,
             "idea_jsonld": idea_schema(idea, idea.owner.display_name),
         },
         user=user,

@@ -71,8 +71,8 @@ FAQ = [
         "Members should agree between themselves who owns what they build.",
     ),
     (
-        "What are backers?",
-        "Signed-in members can back an idea they would like to see built. The number of backers decides what rises to the top.",
+        "How does voting work?",
+        "Signed-in members can upvote or downvote an idea. The net score decides what rises to the top.",
     ),
     (
         "What do the robots do?",
@@ -86,7 +86,7 @@ FAQ = [
     ),
     (
         "Does it cost anything?",
-        "Joining, sharing ideas, backing and verifying are free today.",
+        "Joining, sharing ideas, voting and verifying are free today.",
     ),
     (
         "How do I report a problem or close my account?",
