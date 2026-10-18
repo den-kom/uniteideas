@@ -3,8 +3,8 @@
 {# Light bulb, level 1 (dimmest) to 10 (brightest, top 10% of ideas). Both themes are drawn; CSS shows the right one. #}
 {% macro bulb(level=1) %}
 <span class="bulb-wrap glow-{{ level }}" aria-hidden="true">
-  <img class="bulb bulb-dark" src="/static/bulbs/dark-{{ level }}.svg" alt="" width="63" height="70" loading="lazy" decoding="async" />
-  <img class="bulb bulb-light" src="/static/bulbs/light-{{ level }}.svg" alt="" width="63" height="70" loading="lazy" decoding="async" />
+  <img class="bulb bulb-dark" src="/static/bulbs/dark-{{ level }}.svg?v={{ asset_v }}" alt="" width="63" height="70" loading="lazy" decoding="async" />
+  <img class="bulb bulb-light" src="/static/bulbs/light-{{ level }}.svg?v={{ asset_v }}" alt="" width="63" height="70" loading="lazy" decoding="async" />
 </span>
 {% endmacro %}
 

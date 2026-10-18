@@ -15,6 +15,14 @@ from app.seo import absolute, is_private_path, jsonld, organization
 
 ROOT = Path(__file__).resolve().parents[1]
 templates = Jinja2Templates(directory=str(ROOT / "app" / "templates"))
+def _asset_version() -> str:
+    """Changes whenever a static file does, so browsers fetch new CSS and images after a deploy."""
+    static = ROOT / "app" / "static"
+    newest = max((f.stat().st_mtime for f in static.rglob("*") if f.is_file()), default=0)
+    return str(int(newest))
+
+
+templates.env.globals["asset_v"] = _asset_version()
 templates.env.globals["jsonld"] = jsonld
 templates.env.globals["site_jsonld"] = organization
 
