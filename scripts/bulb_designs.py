@@ -452,7 +452,7 @@ def card_mock(level: int, theme: str = "dark") -> str:
             f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,200,90,.16),{base} 60%);"
             if dark
             else "box-shadow:0 0 0 1px rgba(214,168,20,.55),0 0 28px 4px rgba(255,214,60,.30),0 0 70px 12px rgba(255,220,80,.14);"
-            f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,226,90,.26),{base} 62%);"
+            f"background:{base};"
         )
     else:
         glow = f"background:{base};"
