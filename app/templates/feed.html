@@ -22,10 +22,11 @@
     </select>
   </label>
   <label>Category
-    <input type="text" name="category" value="{{ filter_category }}" list="cats" placeholder="any" />
-    <datalist id="cats">
-      {% for c in categories %}<option value="{{ c }}"></option>{% endfor %}
-    </datalist>
+    <select name="category">
+      <option value="">Any category</option>
+      {% for c in categories %}<option value="{{ c }}" {% if c == filter_category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      {% if filter_category and filter_category not in categories %}<option value="{{ filter_category }}" selected>{{ filter_category }}</option>{% endif %}
+    </select>
   </label>
   <label>Sort
     <select name="sort">

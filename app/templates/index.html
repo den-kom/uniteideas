@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_ideas.html" import idea_card with context %}
-{% block title %}UniteIdeas — share it, prove it, build it{% endblock %}
+{% block title %}UniteIdeas - share it, prove it, build it{% endblock %}
 {% block meta_description %}Share a one-page summary of your idea, keep the details sealed, and get a timestamped receipt. Then find people who want to help build it.{% endblock %}
 
 {% block jsonld %}{{ jsonld(site_jsonld()) }}{% endblock %}
@@ -27,22 +27,27 @@
 
   <ol class="flow" aria-label="Publish, verify, build a team, create a proof of concept">
     <li>
+      <a class="flow-link" href="/submit">
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <rect x="10" y="14" width="44" height="36" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
         <path d="M18 24h28M18 32h20M18 40h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
       </svg>
       <h3>1. Publish a one-pager</h3>
       <p>A short public summary anyone can read and vote on. Keep the full details sealed until you are ready.</p>
+    </a>
     </li>
     <li>
+      <a class="flow-link" href="/verify">
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <path d="M32 8l18 7v15c0 12-8 21-18 26C22 51 14 42 14 30V15z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
         <path d="M23 31l7 7 12-14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h3>2. Verify your idea</h3>
       <p>You get a receipt with the time you shared it. Anyone can check it, so the credit stays yours.</p>
+    </a>
     </li>
     <li>
+      <a class="flow-link" href="/connect-teams">
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="24" cy="26" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
         <circle cx="42" cy="26" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
@@ -50,14 +55,17 @@
       </svg>
       <h3>3. Build a team</h3>
       <p>People offer the skills and hours they can give. You choose who joins.</p>
+    </a>
     </li>
     <li>
+      <a class="flow-link" href="/how-it-works">
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <path d="M24 10h16M28 10v14L14 48a4 4 0 0 0 4 6h28a4 4 0 0 0 4-6L36 24V10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M20 40h24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
       </svg>
       <h3>4. Create a proof of concept</h3>
       <p>Work together to show the idea can work, before anyone invests more time or money.</p>
+    </a>
     </li>
   </ol>
 </section>

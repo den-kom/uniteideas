@@ -102,7 +102,7 @@ def feed(
     joiner = "&" if "?" in base else "?"
     canonical = absolute(base + (f"{joiner}page={page}" if page > 1 else ""))
     robots = "noindex,follow" if (type != "all" or sort != "top") else None
-    title = f"{cat.title()} ideas — UniteIdeas" if cat else "Browse ideas — UniteIdeas"
+    title = f"{cat.title()} ideas - UniteIdeas" if cat else "Browse ideas - UniteIdeas"
 
     return render(
         request,

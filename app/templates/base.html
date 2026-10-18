@@ -11,7 +11,7 @@
       } catch (e) {}
     })();
   </script>
-  <title>{% block title %}UniteIdeas — share an idea, keep the proof, find a team{% endblock %}</title>
+  <title>{% block title %}UniteIdeas - share an idea, keep the proof, find a team{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}UniteIdeas is a community for people with ideas. Share a public one-pager, seal the details, keep a timestamped proof, and find others who want to build it with you.{% endblock %}" />
   <link rel="canonical" href="{% block canonical %}{{ canonical_url }}{% endblock %}" />
   <meta name="robots" content="{{ robots or ('noindex,nofollow' if noindex else 'index,follow') }}" />
@@ -35,17 +35,18 @@
     <span class="brand-name">Unite<span>Ideas</span></span>
   </a>
   <nav class="nav">
+    {% set path = request.url.path %}
     {% if user %}
-      <a href="/submit" class="cta">Submit</a>
+      <a href="/submit"{% if path == '/submit' %} class="active" aria-current="page"{% endif %}>Submit</a>
     {% else %}
-      <a href="/login" class="cta">Join</a>
+      <a href="/login"{% if path == '/login' %} class="active" aria-current="page"{% endif %}>Join</a>
     {% endif %}
-    <a href="/ideas">Ideas</a>
-    <a href="/verify">Verify</a>
+    <a href="/ideas"{% if path == '/ideas' or path.startswith('/ideas/') %} class="active" aria-current="page"{% endif %}>Ideas</a>
+    <a href="/verify"{% if path == '/verify' %} class="active" aria-current="page"{% endif %}>Verify</a>
     {% if user %}
-      <a href="/profile">{{ user.display_name }}</a>
-      {% if user.is_staff %}<a href="/moderation">Moderation</a>{% endif %}
-      {% if user.is_admin %}<a href="/admin">Admin</a>{% endif %}
+      <a href="/profile"{% if path.startswith('/profile') %} class="active" aria-current="page"{% endif %}>{{ user.display_name }}</a>
+      {% if user.is_staff %}<a href="/moderation"{% if path.startswith('/moderation') %} class="active" aria-current="page"{% endif %}>Moderation</a>{% endif %}
+      {% if user.is_admin %}<a href="/admin"{% if path.startswith('/admin') %} class="active" aria-current="page"{% endif %}>Admin</a>{% endif %}
       <form method="post" action="/logout" class="inline"><button class="link">Sign out</button></form>
     {% endif %}
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light theme" title="Theme">

@@ -49,7 +49,7 @@
     <h3><a href="/ideas/{{ idea.id }}">{{ idea.title }}</a></h3>
     <p class="idea-summary">{{ idea.summary }}</p>
     <p class="chips">
-      <span class="chip chip-{{ idea.idea_type }}">{{ idea.idea_type }}</span>
+      <a class="chip chip-{{ idea.idea_type }}" href="/ideas?type={{ idea.idea_type }}">{{ idea.idea_type }}</a>
       <a class="chip" href="/ideas?category={{ idea.category|urlencode }}">{{ idea.category }}</a>
       {% if idea.has_sealed_detail and not idea.sealed_is_public %}<span class="chip chip-seal">sealed detail</span>{% endif %}
       <span class="chip chip-plain">{{ idea.created_at.strftime('%d %b %Y') }}</span>
