@@ -243,14 +243,17 @@ def d6b(b: float, theme: str = "dark") -> str:
     core = glow_colour(min(1, b + 0.3))
     wire = "#9a9a9a" if theme == "dark" else "#6f6f6f"
     pts = []
+    # Mirror-symmetric about the bulb's centre line: x is odd and y is even in u, and both ends sit
+    # at the bottom of a loop, where the support wires meet them.
     for i in range(0, 241):
-        t = i / 240 * 6 * math.pi
-        x = 38 + 44 * i / 240 + 6.5 * math.cos(t)
-        y = 54 + 9 * math.sin(t)
+        k = i / 120 - 1
+        t = 3 * math.pi * k
+        x = 60 + 22 * k + 6.5 * math.sin(t)
+        y = 54 - 9 * math.cos(t)
         pts.append(f"{x:.1f} {y:.1f}")
     coil = "M" + " L".join(pts)
     # Two thin wires rise from the base, bend out to each end of the coil, and a short cross-wire holds the stem.
-    wires = "M52 112 V90 L44.5 56 M68 112 V90 L88.5 56"
+    wires = "M52 112 V90 L38 63 M68 112 V90 L82 63"
     return wrap(
         halo(u, b)
         + f"<defs>{glow_filter(u + 'g', 1.6 + 3 * b)}</defs>"
