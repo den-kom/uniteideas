@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -80,9 +80,9 @@ FAQ = [
         "and keeping the site running. People make the final decisions.",
     ),
     (
-        "What are Unite Ideas and Unite Talent?",
-        "Two features we are building. Unite Ideas spots ideas that overlap and suggests combining or branching them. "
-        "Unite Talent suggests teammates whose skills fit an idea. Both are coming soon.",
+        "What are Link Ideas and Connect Teams?",
+        "Two tools we are building. Link Ideas spots ideas that overlap and suggests combining or branching them. "
+        "Connect Teams matches the roles a team needs with the skills members list. Both are coming soon.",
     ),
     (
         "Does it cost anything?",
@@ -150,11 +150,21 @@ def sitemap(db: Session = Depends(get_db)) -> Response:
     return Response(seo.sitemap_xml(db), media_type="application/xml")
 
 
+@router.get("/link-ideas")
+def link_ideas(request: Request, user: User | None = Depends(current_user)):
+    return render(request, "link_ideas.html", {}, user=user)
+
+
 @router.get("/unite-ideas")
-def unite_ideas(request: Request, user: User | None = Depends(current_user)):
-    return render(request, "unite_ideas.html", {}, user=user)
+def old_unite_ideas():
+    return RedirectResponse("/link-ideas", status_code=301)
+
+
+@router.get("/connect-teams")
+def connect_teams(request: Request, user: User | None = Depends(current_user)):
+    return render(request, "connect_teams.html", {}, user=user)
 
 
 @router.get("/unite-talent")
-def unite_talent(request: Request, user: User | None = Depends(current_user)):
-    return render(request, "unite_talent.html", {}, user=user)
+def old_unite_talent():
+    return RedirectResponse("/connect-teams", status_code=301)

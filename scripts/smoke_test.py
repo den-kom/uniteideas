@@ -378,12 +378,12 @@ def main() -> None:
             ("/faq", "Questions people ask"),
             ("/contact", "Contact"),
             ("/categories", "Browse by category"),
-            ("/unite-ideas", "Unite Ideas"),
-            ("/unite-talent", "Unite Talent"),
+            ("/link-ideas", "Link Ideas"),
+            ("/connect-teams", "Connect Teams"),
         ):
             r = anon.get(path)
             check(f"{path} renders", r.status_code == 200 and needle in r.text)
-        check("home page announces what is coming", "/unite-ideas" in anon.get("/").text and "/unite-talent" in anon.get("/").text)
+        check("home page announces what is coming", "/link-ideas" in anon.get("/").text and "/connect-teams" in anon.get("/").text)
         check("robots.txt hides private areas", "Disallow: /admin" in anon.get("/robots.txt").text and "Sitemap:" in anon.get("/robots.txt").text)
         sm = anon.get("/sitemap.xml")
         check("sitemap is XML", sm.status_code == 200 and sm.text.startswith("<?xml") and "<urlset" in sm.text)
@@ -516,6 +516,13 @@ def check_base_url_resolution() -> None:
             check("an unpinned public host is refused", False, "it built a link anyway")
         except RuntimeError as exc:
             check("an unpinned public host is refused", "PUBLIC_BASE_URL is not set" in str(exc))
+
+        from app.glow import levels_for
+
+        check("the most voted idea glows brightest, the least dimmest", levels_for([100, 10, 1]) == [10, 6, 1])
+        check("ideas with no positive votes stay dim", levels_for([0, 0, -2]) == [1, 1, 1])
+        check("tied ideas share a level", len(set(levels_for([3, 3, 3, 1, 0])[:3])) == 1)
+        check("a full board spreads across all ten levels", sorted(set(levels_for(list(range(1, 41))))) == list(range(1, 11)))
     finally:
         os.environ["PUBLIC_BASE_URL"] = pinned
         config.get_settings.cache_clear()

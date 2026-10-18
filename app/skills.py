@@ -1,6 +1,6 @@
 """The skills people can tick on their profile. Slugs are stored; labels are for display.
 
-Kept in code, not the database, so the list is easy to review and change. Unite Talent
+Kept in code, not the database, so the list is easy to review and change. Connect Teams
 will match on these slugs, so do not rename a slug once people have chosen it.
 """
 

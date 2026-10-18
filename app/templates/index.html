@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_ideas.html" import idea_card with context %}
-{% block title %}UniteIdeas — put your idea on the record{% endblock %}
+{% block title %}UniteIdeas — share it, prove it, build it{% endblock %}
 {% block meta_description %}Share a one-page summary of your idea, keep the details sealed, and get a timestamped receipt. Then find people who want to help build it.{% endblock %}
 
 {% block jsonld %}{{ jsonld(site_jsonld()) }}{% endblock %}
@@ -10,54 +10,37 @@
 {# Hero copy lives here so the slogan is a one-line change. Alternatives are listed in docs/REBUILD_PROGRESS.md. #}
 <section class="hero">
   <div class="hero-copy">
-    <h1>Put your idea on the record.</h1>
+    <h1>Share it. Prove it. Build it.</h1>
     <p class="lede">
-      Share a one-page summary, keep the full details sealed, and get a timestamped
-      receipt. Then find people who want to help you build it.
+      Publish your idea, get a timestamped receipt that shows you had it first,
+      then team up with people who want to build a proof of concept with you.
     </p>
     <div class="hero-actions">
-      <a class="btn" href="{{ '/submit' if user else '/login' }}">Share an idea</a>
+      <a class="btn" href="{{ '/submit' if user else '/login' }}">{{ 'Share an idea' if user else 'Join and share an idea' }}</a>
       <a class="btn ghost" href="/ideas">Browse ideas</a>
     </div>
-    <p class="hero-note"><a href="/verify">Already have a receipt? Verify it.</a></p>
   </div>
 </section>
 
 <section class="how" aria-labelledby="how-heading">
   <h2 id="how-heading">How it works</h2>
-  <p class="lede">Three steps. No jargon. Built so fear of being scooped does not kill the idea.</p>
 
-  <ol class="flow" aria-label="Share, seal, keep the receipt">
+  <ol class="flow" aria-label="Publish, verify, build a team, create a proof of concept">
     <li>
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
         <rect x="10" y="14" width="44" height="36" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
         <path d="M18 24h28M18 32h20M18 40h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
       </svg>
       <h3>1. Publish a one-pager</h3>
-      <p>A short public summary anyone can read, back, and offer to help with.</p>
+      <p>A short public summary anyone can read and vote on. Keep the full details sealed until you are ready.</p>
     </li>
     <li>
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
-        <rect x="16" y="28" width="32" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="3"/>
-        <path d="M24 28v-6a8 8 0 0 1 16 0v6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <path d="M32 8l18 7v15c0 12-8 21-18 26C22 51 14 42 14 30V15z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M23 31l7 7 12-14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <h3>2. Seal the details</h3>
-      <p>Keep the full write-up sealed. We publish only its fingerprint until you choose to reveal it.</p>
-    </li>
-    <li>
-      <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="32" r="18" fill="none" stroke="currentColor" stroke-width="3"/>
-        <path d="M32 20v12l8 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-      <h3>3. Keep the receipt</h3>
-      <p>Download a proof bundle. Anyone can check the content and the time it was submitted.</p>
-    </li>
-    <li>
-      <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M32 18l5 11 12 2-9 8 2 12-10-6-10 6 2-12-9-8 12-2z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-      </svg>
-      <h3>4. Get votes</h3>
-      <p>Members vote on the ideas they want to see built. Votes show real interest, not just views.</p>
+      <h3>2. Verify your idea</h3>
+      <p>You get a receipt with the time you shared it. Anyone can check it, so the credit stays yours.</p>
     </li>
     <li>
       <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
@@ -65,8 +48,16 @@
         <circle cx="42" cy="26" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
         <path d="M12 48c0-7 6-12 12-12s12 5 12 12M30 48c0-6 5-11 12-11s12 5 12 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
       </svg>
-      <h3>5. Build a team</h3>
-      <p>People ask to join with the hours they can give. You choose who's in.</p>
+      <h3>3. Build a team</h3>
+      <p>People offer the skills and hours they can give. You choose who joins.</p>
+    </li>
+    <li>
+      <svg class="flow-icon" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M24 10h16M28 10v14L14 48a4 4 0 0 0 4 6h28a4 4 0 0 0 4-6L36 24V10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 40h24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <h3>4. Create a proof of concept</h3>
+      <p>Work together to show the idea can work, before anyone invests more time or money.</p>
     </li>
   </ol>
 </section>
@@ -74,24 +65,24 @@
 <section class="soon" aria-labelledby="soon-heading">
   <h2 id="soon-heading">Coming soon</h2>
   <div class="grid-3 soon-grid">
-    <a class="soon-card" href="/unite-ideas">
+    <a class="soon-card" href="/link-ideas">
       <svg class="soon-icon" viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="18" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
         <circle cx="46" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="3"/>
         <circle cx="32" cy="46" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
         <path d="M22 26l8 14M42 26l-8 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
       </svg>
-      <h3>Unite Ideas</h3>
-      <p>Finds ideas that overlap and suggests combining them, or spinning off your own version.</p>
+      <h3>Link Ideas</h3>
+      <p>Shows ideas that overlap with yours, so you can combine them or spin off your own version.</p>
     </a>
-    <a class="soon-card" href="/unite-talent">
+    <a class="soon-card" href="/connect-teams">
       <svg class="soon-icon" viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="24" cy="22" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
         <circle cx="44" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
         <path d="M10 48c0-9 6-16 14-16s14 7 14 16M34 48c1-7 6-12 13-12s13 5 14 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
       </svg>
-      <h3>Unite Talent</h3>
-      <p>Suggests teammates whose skills fit your idea.</p>
+      <h3>Connect Teams</h3>
+      <p>Matches the roles a team needs with the skills members list on their profiles.</p>
     </a>
   </div>
 </section>

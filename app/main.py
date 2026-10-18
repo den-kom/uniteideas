@@ -13,7 +13,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
-from app import timestamping
+from app import glow, timestamping
 from app.db import SessionLocal, init_db
 from app.routes import admin, agent_api, auth, content, ideas, moderation, pages, profiles, teams
 from app.seo import is_private_path
@@ -30,10 +30,12 @@ async def lifespan(app: FastAPI):
     settings.outbox_dir.mkdir(parents=True, exist_ok=True)
     init_db()
     worker = asyncio.create_task(timestamping.worker_loop(SessionLocal))
+    glow_worker = asyncio.create_task(glow.worker_loop(SessionLocal))
     try:
         yield
     finally:
         worker.cancel()
+        glow_worker.cancel()
 
 
 app = FastAPI(title="UniteIdeas", version="0.3.0", lifespan=lifespan)

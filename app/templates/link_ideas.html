@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Link Ideas — find ideas that belong together{% endblock %}
+{% block meta_description %}Link Ideas will show you ideas that overlap with yours so you can combine them or spin off your own version. Coming soon to UniteIdeas.{% endblock %}
+{% block content %}
+<h1>Link Ideas <span class="chip chip-soon">coming soon</span></h1>
+<p class="lede">Many people have the same idea at the same time. Link Ideas will help them find each other instead of building the same thing twice.</p>
+
+<h2>What it will do</h2>
+<ul>
+  <li><strong>Spot overlap.</strong> It compares the categories, tags and public wording of one-pagers and shows you ideas that sit close to yours.</li>
+  <li><strong>Suggest a link.</strong> If both authors agree, the ideas can be combined into one stronger idea with a shared team.</li>
+  <li><strong>Spin off your own version.</strong> If you like part of an idea but want to take it a different way, you can start your own version that credits the original.</li>
+  <li><strong>Keep sealed detail sealed.</strong> Matching only uses what is public. Nothing is linked or shown without the authors' say-so.</li>
+</ul>
+
+<h2>How it works</h2>
+<p>Simple, visible rules, not a black box: shared category, shared keywords and similar wording. A suggestion is only a suggestion. People make every decision.</p>
+
+<p class="row">
+  <a class="btn" href="{{ '/submit' if user else '/login' }}">{{ 'Share an idea' if user else 'Join and share an idea' }}</a>
+  <a class="btn ghost" href="/connect-teams">See Connect Teams</a>
+</p>
+<p class="fine">Want to shape this? <a href="/contact">Tell us what would help.</a></p>
+{% endblock %}

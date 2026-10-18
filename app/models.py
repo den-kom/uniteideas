@@ -144,6 +144,7 @@ class Idea(Base):
     status: Mapped[str] = mapped_column(String(20), default=STATUS_PUBLISHED, index=True)
     review_note: Mapped[str] = mapped_column(Text, default="")
     score: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    glow_level: Mapped[int] = mapped_column(Integer, default=1)  # 1 dimmest .. 10 brightest, recalculated daily
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
