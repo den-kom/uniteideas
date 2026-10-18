@@ -248,6 +248,8 @@ def sparkles(c: str) -> str:
 
 # 6b -- the chosen look: neon tube outline, horizontal mirror-symmetric coil, grey support wires
 def d6b(b: float, theme: str = "dark", aura: bool | None = None) -> str:
+    if theme == "light":
+        return d6b_light(b, aura)
     u, col = "d6b", glow_colour(b)
     if aura is None:
         aura = b >= 0.9  # the top 10% of ideas also light up the space around them
@@ -281,6 +283,51 @@ def d6b(b: float, theme: str = "dark", aura: bool | None = None) -> str:
         + f'<g stroke="{core}" stroke-width="1.8"><path d="M43.5 120 H76.5"/><path d="M43.5 129 H76.5"/><path d="M43.5 138 H76.5"/><path d="M50 147 H70"/></g>'
         + "</g>"
     )
+
+
+def _coil_path() -> str:
+    pts = []
+    for i in range(0, 241):
+        k = i / 120 - 1
+        t = 3 * math.pi * k
+        pts.append(f"{60 + 22 * k + 6.5 * math.sin(t):.1f} {54 - 9 * math.cos(t):.1f}")
+    return "M" + " L".join(pts)
+
+
+# 6b on a light background: a lit glass bulb. Pale and grey when dim, saturated yellow and orange
+# when bright, with a warm soft shadow-glow instead of the neon bloom (which would vanish on white).
+def d6b_light(b: float, aura: bool | None = None) -> str:
+    u = "d6l"
+    if aura is None:
+        aura = b >= 0.9
+    line = mix((178, 160, 132), (226, 104, 8), b)
+    coil = mix((196, 176, 140), (238, 96, 0), min(1, b * 1.1))
+    fill = mix((255, 246, 224), (255, 184, 20), b)
+    wire = "#7a7a7a"
+    bars = f'<path d="M43.5 120 H76.5"/><path d="M43.5 129 H76.5"/><path d="M43.5 138 H76.5"/><path d="M50 147 H70"/>'
+    outer = (
+        f'<radialGradient id="{u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb62e" stop-opacity=".55"/>'
+        '<stop offset="1" stop-color="#ffb62e" stop-opacity="0"/></radialGradient>'
+        f'<circle cx="60" cy="70" r="150" fill="url(#{u}o)"/>'
+        if aura else ""
+    )
+    return wrap(
+        outer
+        + f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb62e" stop-opacity="{0.42 * b:.2f}"/>'
+        + '<stop offset="1" stop-color="#ffb62e" stop-opacity="0"/></radialGradient>'
+        + f'<radialGradient id="{u}f" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#ffe45c" stop-opacity="{0.1 + 0.9 * b:.2f}"/>'
+        + f'<stop offset="1" stop-color="{fill}" stop-opacity="{0.05 + 0.85 * b:.2f}"/></radialGradient>'
+        + f'<filter id="{u}g" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="{1.5 + 3 * b:.1f}"/></filter></defs>'
+        + f'<circle cx="60" cy="56" r="78" fill="url(#{u}h)"/>'
+        + f'<path d="{BULB}" fill="url(#{u}f)"/>'
+        + f'<path d="{BULB}" fill="none" stroke="#ff9d1c" stroke-width="7" opacity="{0.5 * b:.2f}" filter="url(#{u}g)"/>'
+        + f'<path d="M52 112 V90 L38 63 M68 112 V90 L82 63" fill="none" stroke="{wire}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
+        + f'<circle cx="52" cy="90" r="1.6" fill="{wire}"/><circle cx="68" cy="90" r="1.6" fill="{wire}"/>'
+        + f'<path d="{BULB}" fill="none" stroke="{line}" stroke-width="2.6" stroke-linejoin="round"/>'
+        + f'<path d="{_coil_path()}" fill="none" stroke="{coil}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+        + f'<g fill="none" stroke="{line}" stroke-width="2.6" stroke-linecap="round">{bars}</g>'
+    )
+
 
 # 7 -- Technical cutaway: thin line art, glass stem, compact coil on two posts
 def d7(b: float) -> str:
@@ -398,13 +445,24 @@ def gallery(b: float = 0.5, theme: str = "dark") -> str:
     )
 
 
-def card_mock(level: int) -> str:
+def card_mock(level: int, theme: str = "dark") -> str:
     b = (level - 0.5) / 10
-    glow = ("box-shadow:0 0 0 1px rgba(255,214,120,.55),0 0 36px 6px rgba(255,190,70,.38),0 0 90px 18px rgba(255,170,40,.2);"
-            "background:radial-gradient(120% 140% at 12% 50%,rgba(255,200,90,.16),#1f1b16 60%);" if level == 10 else "background:#1f1b16;")
+    dark = theme == "dark"
+    base, line = ("#1f1b16", "#3a3228") if dark else ("#fffdf8", "#e6dccb")
+    if level == 10:
+        glow = (
+            "box-shadow:0 0 0 1px rgba(255,214,120,.55),0 0 36px 6px rgba(255,190,70,.38),0 0 90px 18px rgba(255,170,40,.2);"
+            f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,200,90,.16),{base} 60%);"
+            if dark
+            else "box-shadow:0 0 0 1px rgba(240,140,20,.55),0 0 30px 4px rgba(255,170,40,.42),0 0 80px 14px rgba(255,150,20,.2);"
+            f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,196,70,.34),{base} 62%);"
+        )
+    else:
+        glow = f"background:{base};"
+    votes = [3, 9, 14, 21, 34, 45, 60, 88, 130, 212][level - 1]
     return (
-        f'<div style="display:flex;align-items:center;gap:14px;width:420px;padding:16px 18px;border-radius:14px;border:1px solid #3a3228;{glow}">'
-        f'<div class="m" style="width:78px;text-align:center;flex:none">{d6b(b)}<div style="font-size:20px;margin-top:2px">{[3,9,14,21,34,45,60,88,130,212][level-1]}</div></div>'
+        f'<div style="display:flex;align-items:center;gap:14px;width:420px;padding:16px 18px;border-radius:14px;border:1px solid {line};{glow}">'
+        f'<div class="m" style="width:78px;text-align:center;flex:none">{d6b(b, theme)}<div style="font-size:20px;margin-top:2px">{votes}</div></div>'
         '<div><div style="font-weight:600;font-size:18px">Shared tool library for apartment blocks</div>'
         '<div style="opacity:.7;font-size:14px;margin-top:6px">A booking board so neighbours can lend each other drills and ladders.</div></div></div>'
     )
@@ -431,7 +489,13 @@ if __name__ == "__main__":
     for num, _label, fn in DESIGNS:
         (out / f"bulb-{num}.svg").write_text(fn(0.5))
     (out / "bulb-6b.svg").write_text(d6b(0.5))
-    (out / "levels-dark.html").write_text(levels_sheet("dark"))
+    for th in ("dark", "light"):
+        (out / f"levels-{th}.html").write_text(levels_sheet(th))
+        bg, fg = ("#14110d", "#f4eee4") if th == "dark" else ("#f7f1e6", "#1c160c")
+        (out / f"cards-{th}.html").write_text(
+            f'<style>.m svg{{width:78px;height:auto}}</style><body style="margin:0;background:{bg};color:{fg};font:15px system-ui;padding:60px 70px;display:flex;flex-direction:column;gap:46px;align-items:flex-start">'
+            + card_mock(5, th) + card_mock(10, th) + "</body>"
+        )
     (out / "cards.html").write_text(
         '<style>.m svg{width:78px;height:auto}</style><body style="margin:0;background:#14110d;color:#f4eee4;font:15px system-ui;padding:60px 70px;display:flex;flex-direction:column;gap:46px;align-items:flex-start">'
         + card_mock(5) + card_mock(10) + "</body>"
