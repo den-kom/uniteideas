@@ -1,0 +1,7 @@
+[Unit]
+Description=UniteIdeas auto-deploy (pull origin/main and restart if changed)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/uniteideas
+ExecStart=%h/uniteideas/scripts/auto_deploy.sh
