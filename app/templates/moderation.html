@@ -5,6 +5,36 @@
 <h1>Moderation queue</h1>
 
 <section>
+  <h2>Held by screening ({{ held|length }})</h2>
+  <p class="fine">
+    Ideas and custom skills the automatic check was unsure about. Approving lets them through; rejecting removes them.
+    {% if waiting_for_agent %}{{ waiting_for_agent }} more {{ 'is' if waiting_for_agent == 1 else 'are' }} waiting for AgentBob.{% endif %}
+  </p>
+  {% for item in held %}
+  <div class="card">
+    <p class="meta">
+      {{ item.kind }} &middot; {{ item.created_at.strftime('%d %b %Y %H:%M') }} &middot;
+      {{ held_users[item.user_id].display_name if held_users[item.user_id] else item.user_id }}
+    </p>
+    {% if item.kind == 'idea' and held_ideas[item.ref] %}
+    <h3><a href="/ideas/{{ item.ref }}">{{ held_ideas[item.ref].title }}</a></h3>
+    {% endif %}
+    <p>{{ item.text[:400] }}</p>
+    <p class="fine">{{ item.reason }}</p>
+    <form method="post" action="/moderation/screening/{{ item.id }}/approve" class="inline">
+      <button class="btn small">Approve</button>
+    </form>
+    <form method="post" action="/moderation/screening/{{ item.id }}/reject" class="stack">
+      <input type="text" name="note" placeholder="Reason (optional)" />
+      <div class="row"><button class="btn small danger">Reject</button></div>
+    </form>
+  </div>
+  {% else %}
+  <p class="hint">Nothing held.</p>
+  {% endfor %}
+</section>
+
+<section>
   <h2>First submissions awaiting review ({{ pending_ideas|length }})</h2>
   <p class="fine">
     Only an account's first-ever idea lands here. Approving it publishes the idea and

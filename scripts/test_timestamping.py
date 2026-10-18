@@ -240,10 +240,10 @@ def main() -> None:
     check("existing proofs are queued for a timestamp", row[0] == "pending_submit")
     check("existing votes become upvotes", vote_value[0] == 1, vote_value)
     check("ideas gain a glow level", glow[0] == 1)
-    check("database is marked up to date", ver[0] == "0007", str(ver))
+    check("database is marked up to date", ver[0] == "0008", str(ver))
 
     fresh = sqlite3.connect(os.environ["DB_PATH"])
-    check("a new database is created at the latest version", fresh.execute("select version_num from alembic_version").fetchone()[0] == "0007")
+    check("a new database is created at the latest version", fresh.execute("select version_num from alembic_version").fetchone()[0] == "0008")
 
     print(f"\n{PASSED} checks passed")
 

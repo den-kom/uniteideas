@@ -525,3 +525,17 @@ td form.inline select { width: auto; margin: 0; padding: 5px 8px; font-size: 13p
 .soon-icon { width: 40px; height: 40px; color: var(--accent); margin-bottom: 10px; }
 .soon-card h3 { margin: 0 0 4px; }
 .soon-card p { margin: 0; color: var(--muted); }
+
+/* Skill picker */
+.picker-box { position: relative; }
+.picker-list {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 20; margin: 4px 0 0; padding: 4px;
+  list-style: none; background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); max-height: 18em; overflow: auto;
+}
+.picker-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.picker-list li.on, .picker-list li:hover { background: rgba(255, 170, 40, .16); }
+.picker-list small { opacity: .65; }
+.chip.picked { display: inline-flex; align-items: center; gap: 6px; }
+.chip.picked.custom { border-style: dashed; }
+.chip-x { background: none; border: 0; color: inherit; font-size: 1.1em; line-height: 1; cursor: pointer; padding: 0 2px; }

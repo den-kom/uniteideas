@@ -170,10 +170,10 @@
   {% if user and not is_owner %}
   <section>
     <details>
-      <summary>Report this idea</summary>
+      <summary>Flag as inappropriate</summary>
       <form method="post" action="/ideas/{{ idea.id }}/report" class="stack">
-        <textarea name="reason" rows="3" placeholder="What's wrong with it?"></textarea>
-        <button class="btn small ghost">Send report</button>
+        <textarea name="reason" rows="3" placeholder="What is inappropriate about it? Moderators will look at it."></textarea>
+        <button class="btn small ghost">Send flag</button>
       </form>
     </details>
   </section>

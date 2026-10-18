@@ -325,7 +325,7 @@ def main() -> None:
                 "hours_per_week": "6",
                 "goals": ["join", "bogus-goal"],
                 "skills": ["web-dev", "3d-modelling", "not-a-skill"],
-                "other_skills": "Beekeeping",
+                "custom_skills": ["Beekeeping", "Gun smuggling logistics"],
                 "profile_public": "1",
             },
             follow_redirects=True,
@@ -335,6 +335,13 @@ def main() -> None:
         public = anon.get(f"/u/{helper_id}")
         check("public profile shows skills", "3D modelling" in public.text and "Web development" in public.text)
         check("unknown skills are dropped", "not-a-skill" not in public.text and "bogus" not in public.text)
+        check("an acceptable custom skill is shown", "Beekeeping" in public.text)
+        check("a custom skill on a blocked topic is held back", "smuggling" not in public.text)
+        queue_page = owner.get("/moderation").text
+        check("the held custom skill reaches the moderator queue", "Gun smuggling logistics" in queue_page and "Held by screening" in queue_page)
+        held_id = queue_page.split("/moderation/screening/")[1].split("/")[0]
+        check("a moderator can approve a held skill", "Decision saved" in owner.post(f"/moderation/screening/{held_id}/approve", follow_redirects=True).text)
+        check("an approved held skill is shown", "smuggling" in anon.get(f"/u/{helper_id}").text)
         check("email is not shown on the profile", "helper@example.com" not in public.text)
         check("banner stops nagging once profiled", "Tell us what you can help with" not in helper.get("/").text)
         helper.post(
@@ -347,6 +354,47 @@ def main() -> None:
             "skills can be removed",
             "3D modelling" not in helper.get(f"/u/{helper_id}").text,
         )
+        # --- screening ------------------------------------------------------
+        from app import screening as scr
+
+        check("clean text passes the word check", scr.check_text("A booking board for neighbours")[0] == "approved")
+        check("blocked topics are escalated, not rejected", scr.check_text("Selling an assault rifle online")[0] == "escalated")
+        check("innocent words are not flagged", scr.check_text("Drug discovery for rare diseases and a kill switch")[0] == "approved")
+        held_idea = owner.post(
+            "/submit",
+            data={"title": "Explosive growth hacks", "summary": "How to build a homemade bomb at home for fun.",
+                  "category": "general", "idea_type": "digital"},
+            follow_redirects=False,
+        )
+        held_idea_id = held_idea.headers["location"].split("?")[0].rsplit("/", 1)[-1]
+        check("a flagged idea from a trusted account is still held", anon.get(f"/ideas/{held_idea_id}").status_code == 404)
+        mq = owner.get("/moderation").text
+        check("the held idea shows in the screening queue", "Held by screening (1)" in mq)
+        item_id = mq.split("/moderation/screening/")[1].split("/")[0]
+        check("a moderator can reject a held idea", "Decision saved" in owner.post(f"/moderation/screening/{item_id}/reject", data={"note": "No"}, follow_redirects=True).text)
+        check("a rejected idea stays hidden", anon.get(f"/ideas/{held_idea_id}").status_code == 404)
+
+        os.environ["SCREENING_MODE"] = "agent"
+        from app.config import get_settings as _gs
+        _gs.cache_clear()
+        waiting = owner.post(
+            "/submit",
+            data={"title": "Seed library for schools", "summary": "Kids swap seeds and grow herbs on the roof.",
+                  "category": "education", "idea_type": "physical"},
+            follow_redirects=False,
+        )
+        waiting_id = waiting.headers["location"].split("?")[0].rsplit("/", 1)[-1]
+        check("in agent mode a clean idea waits for AgentBob", anon.get(f"/ideas/{waiting_id}").status_code == 404)
+        nxt = anon.get("/api/agent/screen/next", headers=headers).json()["item"]
+        check("AgentBob is offered the waiting item", nxt is not None and "Seed library" in nxt["text"])
+        check("the screening API needs the token", anon.get("/api/agent/screen/next").status_code == 401)
+        check("AgentBob cannot reject", anon.post(f"/api/agent/screen/{nxt['id']}/decide", headers=headers, json={"verdict": "rejected"}).status_code == 409)
+        ok = anon.post(f"/api/agent/screen/{nxt['id']}/decide", headers=headers, json={"verdict": "approved", "reason": "clean"})
+        check("AgentBob approves a clean idea", ok.status_code == 200 and anon.get(f"/ideas/{waiting_id}").status_code == 200)
+        check("a decided item cannot be decided again", anon.post(f"/api/agent/screen/{nxt['id']}/decide", headers=headers, json={"verdict": "escalated"}).status_code == 409)
+        os.environ["SCREENING_MODE"] = "rules"
+        _gs.cache_clear()
+
         bot = anon.get("/u/user-agentbob")
         check("AgentBob has a public profile marked as a robot", bot.status_code == 200 and "robot" in bot.text)
         refused = anon.post("/login", data={"email": "agentbob@system.invalid"}, follow_redirects=False)

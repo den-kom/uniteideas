@@ -11,11 +11,14 @@ from __future__ import annotations
 import secrets
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
-from app.models import User
+from app import screening
+from app.models import ScreenItem, User
 from app.system_users import AGENTBOB_ID
 
 router = APIRouter(prefix="/api/agent")
@@ -42,3 +45,40 @@ def ping(db: Session = Depends(get_db), _: None = Depends(require_agent)) -> dic
         "agent": bot.display_name if bot else None,
         "user_id": bot.id if bot else None,
     }
+
+
+@router.get("/screen/next")
+def screen_next(db: Session = Depends(get_db), _: None = Depends(require_agent)) -> dict:
+    """The oldest item nobody has checked yet. Returns {"item": null} when the queue is empty.
+
+    Ideas are sent as title, summary and public text only. Sealed text is never sent.
+    """
+    item = db.scalar(
+        select(ScreenItem).where(ScreenItem.status == "pending").order_by(ScreenItem.created_at).limit(1)
+    )
+    if item is None:
+        return {"item": None}
+    return {"item": {"id": item.id, "kind": item.kind, "text": item.text, "created_at": item.created_at.isoformat()}}
+
+
+class Decision(BaseModel):
+    verdict: str  # "approved" or "escalated"
+    reason: str = ""
+
+
+@router.post("/screen/{item_id}/decide")
+def screen_decide(
+    item_id: str,
+    body: Decision,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_agent),
+) -> dict:
+    """AgentBob approves clean items and escalates anything it is unsure about. It cannot reject."""
+    item = db.get(ScreenItem, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="no such item")
+    bot = db.get(User, AGENTBOB_ID)
+    if bot is None or not screening.apply(db, item, body.verdict, body.reason, bot, by_agent=True):
+        raise HTTPException(status_code=409, detail="decision not allowed")
+    db.commit()
+    return {"ok": True, "status": item.status}

@@ -23,7 +23,7 @@ from app.models import (
     utc_now,
 )
 from app.proof import build_receipt, sign_receipt, compute_content_hash, sha256_bytes, sha256_text
-from app import audit, timestamping
+from app import audit, screening, timestamping
 from app.permissions import can
 from app.sealing import seal, unseal
 from app.verification import canonical_for
@@ -129,7 +129,7 @@ async def submit_idea(
         )
         or 0
     )
-    status = STATUS_PUBLISHED if published_before else STATUS_PENDING
+    status = STATUS_PENDING
 
     idea = Idea(
         id=idea_id,
@@ -141,9 +141,10 @@ async def submit_idea(
         public_body=public_body.strip(),
         sealed_blob=seal(sealed_detail),
         status=status,
-        published_at=utc_now() if status == STATUS_PUBLISHED else None,
     )
     db.add(idea)
+    screen = screening.queue_idea(db, idea, extra_text=sealed_detail, trusted=bool(published_before))
+    status = idea.status
     proof = IdeaProof(
         idea_id=idea_id,
         content_hash=content_hash,
@@ -163,11 +164,14 @@ async def submit_idea(
             )
         )
     db.commit()
-    note = (
-        "Idea+submitted+and+timestamped"
-        if status == STATUS_PUBLISHED
-        else "Idea+submitted+and+timestamped.+Your+first+post+is+awaiting+a+moderator+review"
-    )
+    if status == STATUS_PUBLISHED:
+        note = "Idea+submitted+and+timestamped"
+    elif screen.status == "escalated":
+        note = "Idea+submitted+and+timestamped.+A+moderator+will+check+it+before+it+goes+live"
+    elif screen.status == "pending":
+        note = "Idea+submitted+and+timestamped.+It+goes+live+once+it+has+been+checked"
+    else:
+        note = "Idea+submitted+and+timestamped.+Your+first+post+is+awaiting+a+moderator+review"
     return RedirectResponse(f"/ideas/{idea_id}?msg={note}", status_code=303)
 
 

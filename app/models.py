@@ -95,6 +95,11 @@ class User(Base):
         return [s.skill for s in self.skills]
 
     @property
+    def visible_skills(self) -> list["UserSkill"]:
+        """Skills safe to show to others: catalogue skills and custom skills that passed screening."""
+        return [s for s in self.skills if s.status == "approved"]
+
+    @property
     def goal_slugs(self) -> list[str]:
         return [g for g in self.goals.split(",") if g]
 
@@ -114,8 +119,18 @@ class UserSkill(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     skill: Mapped[str] = mapped_column(String(60), index=True)
+    # Catalogue skills are "approved". Custom skills ("custom:<text>") wait for screening.
+    status: Mapped[str] = mapped_column(String(20), default="approved")
 
     user: Mapped[User] = relationship(back_populates="skills")
+
+    @property
+    def is_custom(self) -> bool:
+        return self.skill.startswith("custom:")
+
+    @property
+    def text(self) -> str:
+        return self.skill.removeprefix("custom:")
 
 
 class LoginToken(Base):
@@ -279,6 +294,29 @@ class Report(Base):
     resolved_by: Mapped[str | None] = mapped_column(String(40), nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class ScreenItem(Base):
+    """Text waiting to be checked before it goes live: ideas and custom skills.
+
+    pending    nobody has looked yet (AgentBob takes these when it is running)
+    approved   fine to publish
+    escalated  unsure or flagged; a moderator or admin decides
+    rejected   not allowed
+    """
+
+    __tablename__ = "screen_items"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: short_id("screen"))
+    kind: Mapped[str] = mapped_column(String(20), index=True)  # idea | skill
+    ref: Mapped[str] = mapped_column(String(80), index=True)  # idea id, or "<user id>|<skill>"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    text: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    decided_by: Mapped[str] = mapped_column(String(40), default="")  # rules | user id
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class PocBuild(Base):
