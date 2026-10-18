@@ -25,8 +25,8 @@
   <h1>{{ idea.title }}</h1>
   <p class="lede">{{ idea.summary }}</p>
 
-  <div class="row backers-row">
-    {% if idea.status == 'published' %}{{ vote_arrows(idea, my_vote, "/ideas/" ~ idea.id) }}{% endif %}
+  <div class="row backers-row" data-vote>
+    {% if idea.status == 'published' %}{{ vote_arrows(idea, my_vote, "/ideas/" ~ idea.id, True) }}{% endif %}
     <p class="hint backers-hint">
       {% if not user %}<a href="/login">Sign in</a> to vote on this idea or ask to join the team.
       {% elif my_vote == 'up' %}You upvoted this idea. Click the up arrow again to take it back.
@@ -170,10 +170,10 @@
   {% if user and not is_owner %}
   <section>
     <details>
-      <summary>Report this idea</summary>
+      <summary>Flag as inappropriate</summary>
       <form method="post" action="/ideas/{{ idea.id }}/report" class="stack">
-        <textarea name="reason" rows="3" placeholder="What's wrong with it?"></textarea>
-        <button class="btn small ghost">Send report</button>
+        <textarea name="reason" rows="3" placeholder="What is inappropriate about it? Moderators will look at it."></textarea>
+        <button class="btn small ghost">Send flag</button>
       </form>
     </details>
   </section>

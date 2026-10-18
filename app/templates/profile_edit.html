@@ -31,26 +31,17 @@
     </div>
   </fieldset>
 
-  <fieldset>
+  <fieldset class="skill-picker" data-picker>
     <legend>What can you help with?</legend>
-    <p class="fine">Tick everything that applies. This is what Unite Talent will use to suggest teammates.</p>
-    {% for group, items in skill_groups %}
-    <div class="skill-group">
-      <h3>{{ group }}</h3>
-      <div class="choice-chips">
-        {% for slug, label in items %}
-        <label class="chip-choice">
-          <input type="checkbox" name="skills" value="{{ slug }}" {% if slug in my_skills %}checked{% endif %} />
-          <span>{{ label }}</span>
-        </label>
-        {% endfor %}
-      </div>
+    <p class="fine">Start typing a job or skill and pick it from the list. Can't find yours? Add it as a custom skill; it appears on your profile once it has been checked.</p>
+    <div class="picker-box">
+      <input type="text" id="skill-search" autocomplete="off" placeholder="Developer, HTML, welding, grant writing..." aria-label="Search skills" />
+      <ul class="picker-list" id="skill-list" role="listbox" hidden></ul>
     </div>
-    {% endfor %}
-    <label>Anything else?
-      <input type="text" name="other_skills" value="{{ user.other_skills }}" maxlength="300"
-             placeholder="Beekeeping, Rust, accessibility audits..." />
-    </label>
+    <p class="choice-chips" id="skill-chosen" aria-live="polite"></p>
+    <noscript><p class="hint">The skill picker needs JavaScript.</p></noscript>
+    <script type="application/json" id="skill-catalogue">{{ catalogue|tojson }}</script>
+    <script type="application/json" id="skill-selected">{{ selected_skills|tojson }}</script>
   </fieldset>
 
   <div class="two-up">
@@ -78,4 +69,77 @@
   </div>
 </form>
 
+
+<script>
+(function () {
+  var root = document.querySelector("[data-picker]");
+  if (!root) return;
+  var catalogue = JSON.parse(document.getElementById("skill-catalogue").textContent);
+  var chosen = JSON.parse(document.getElementById("skill-selected").textContent);
+  var input = document.getElementById("skill-search");
+  var list = document.getElementById("skill-list");
+  var out = document.getElementById("skill-chosen");
+  var active = -1, shown = [];
+
+  function has(slug) { return chosen.some(function (c) { return c.slug === slug; }); }
+  function add(item) {
+    if (!has(item.slug)) chosen.push(item);
+    input.value = ""; close(); render(); input.focus();
+  }
+  function remove(slug) { chosen = chosen.filter(function (c) { return c.slug !== slug; }); render(); }
+  function close() { list.hidden = true; list.innerHTML = ""; active = -1; shown = []; }
+
+  function render() {
+    out.innerHTML = "";
+    root.querySelectorAll("input[type=hidden]").forEach(function (n) { n.remove(); });
+    chosen.forEach(function (c) {
+      var chip = document.createElement("span");
+      chip.className = "chip picked" + (c.custom ? " custom" : "");
+      chip.textContent = c.label + (c.custom && c.status !== "approved" ? " (being checked)" : "");
+      var x = document.createElement("button");
+      x.type = "button"; x.className = "chip-x"; x.setAttribute("aria-label", "Remove " + c.label); x.textContent = "\u00d7";
+      x.addEventListener("click", function () { remove(c.slug); });
+      chip.appendChild(x); out.appendChild(chip);
+      var h = document.createElement("input");
+      h.type = "hidden"; h.name = c.custom ? "custom_skills" : "skills"; h.value = c.custom ? c.label : c.slug;
+      root.appendChild(h);
+    });
+  }
+
+  function search() {
+    var q = input.value.trim().toLowerCase();
+    list.innerHTML = ""; shown = []; active = -1;
+    if (!q) { list.hidden = true; return; }
+    catalogue.filter(function (c) { return !has(c.slug) && c.label.toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return (a.label.toLowerCase().indexOf(q) === 0 ? 0 : 1) - (b.label.toLowerCase().indexOf(q) === 0 ? 0 : 1); })
+      .slice(0, 8).forEach(function (c) { shown.push({ slug: c.slug, label: c.label, custom: false, status: "approved", note: c.group }); });
+    var exact = catalogue.some(function (c) { return c.label.toLowerCase() === q; });
+    if (!exact && q.length >= 2 && !has("custom:" + input.value.trim())) {
+      shown.push({ slug: "custom:" + input.value.trim(), label: input.value.trim(), custom: true, status: "pending", note: "Add as a custom skill" });
+    }
+    shown.forEach(function (c, i) {
+      var li = document.createElement("li");
+      li.setAttribute("role", "option");
+      var b = document.createElement("span"); b.textContent = c.custom ? "Add \u201c" + c.label + "\u201d" : c.label;
+      var n = document.createElement("small"); n.textContent = c.note;
+      li.appendChild(b); li.appendChild(n);
+      li.addEventListener("mousedown", function (e) { e.preventDefault(); add(c); });
+      list.appendChild(li);
+    });
+    list.hidden = shown.length === 0;
+  }
+  function mark() {
+    Array.prototype.forEach.call(list.children, function (li, i) { li.classList.toggle("on", i === active); });
+  }
+  input.addEventListener("input", search);
+  input.addEventListener("blur", function () { setTimeout(close, 100); });
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(shown.length - 1, active + 1); mark(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(0, active - 1); mark(); }
+    else if (e.key === "Enter") { if (shown.length) { e.preventDefault(); add(shown[Math.max(0, active)]); } }
+    else if (e.key === "Escape") { close(); }
+  });
+  render();
+})();
+</script>
 {% endblock %}

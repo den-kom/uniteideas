@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Connect Teams — find teammates who fit your idea{% endblock %}
+{% block meta_description %}Connect Teams matches the roles a team needs for its proof of concept with the skills members list on their profiles. Coming soon to UniteIdeas.{% endblock %}
+{% block content %}
+<h1>Connect Teams <span class="chip chip-soon">coming soon</span></h1>
+<p class="lede">A great idea needs the right mix of people. Connect Teams will match the roles a team needs with the skills members have.</p>
+
+<h2>What it will do</h2>
+<ul>
+  <li><strong>Match roles to skills.</strong> If a team needs a developer for its proof of concept, it will be linked to members who listed "developer", or something more specific like HTML, CSS and JavaScript.</li>
+  <li><strong>Work both ways.</strong> Members see teams that need what they can do, and teams see members who fit.</li>
+  <li><strong>Respect time.</strong> It takes account of the hours a week people say they can give.</li>
+  <li><strong>Suggest, never decide.</strong> Idea owners choose who joins. Members choose what they join.</li>
+</ul>
+
+<h2>Get ready</h2>
+<p>The more complete your profile, the better the matches. Add the skills you can offer and how many hours a week you could give.</p>
+
+<p class="row">
+  <a class="btn" href="{{ '/profile/edit' if user else '/login' }}">{{ 'Update my profile' if user else 'Join and add your skills' }}</a>
+  <a class="btn ghost" href="/link-ideas">See Link Ideas</a>
+</p>
+{% endblock %}

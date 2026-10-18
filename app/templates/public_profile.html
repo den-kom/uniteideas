@@ -27,12 +27,11 @@
 </section>
 {% endif %}
 
-{% if member.skill_slugs or member.other_skills %}
+{% if member.visible_skills %}
 <section>
   <h2>Can help with</h2>
   <p class="chips">
-    {% for s in member.skill_slugs %}<span class="chip">{{ skill_labels.get(s, s) }}</span>{% endfor %}
-    {% if member.other_skills %}<span class="chip chip-plain">{{ member.other_skills }}</span>{% endif %}
+    {% for s in member.visible_skills %}<span class="chip">{{ s.text if s.is_custom else skill_labels.get(s.skill, s.skill) }}</span>{% endfor %}
   </p>
 </section>
 {% endif %}

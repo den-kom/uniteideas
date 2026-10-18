@@ -53,6 +53,8 @@ class Settings:
     upload_dir: Path
     outbox_dir: Path
     agent_api_token: str | None
+    # "rules": the built-in word check decides clean items itself. "agent": clean items wait for AgentBob.
+    screening_mode: str
     dev_show_magic_link: bool
     magic_link_ttl_minutes: int
     max_pledge_hours_per_week: int
@@ -78,6 +80,7 @@ def get_settings() -> Settings:
         upload_dir=ROOT / os.getenv("UPLOAD_DIR", "data/uploads"),
         outbox_dir=ROOT / os.getenv("OUTBOX_DIR", "data/outbox"),
         agent_api_token=os.getenv("AGENT_API_TOKEN") or None,
+        screening_mode="agent" if os.getenv("SCREENING_MODE", "rules").strip().lower() == "agent" else "rules",
         dev_show_magic_link=_flag("DEV_SHOW_MAGIC_LINK", "true"),
         magic_link_ttl_minutes=int(os.getenv("MAGIC_LINK_TTL_MINUTES", "30")),
         max_pledge_hours_per_week=int(os.getenv("MAX_PLEDGE_HOURS_PER_WEEK", "40")),

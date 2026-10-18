@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -14,10 +14,11 @@ from app.models import (
     STATUS_REMOVED,
     Idea,
     Report,
+    ScreenItem,
     User,
     utc_now,
 )
-from app import audit
+from app import audit, screening
 from app.permissions import require_permission
 from app.sealing import unseal
 from app.security import require_user
@@ -70,10 +71,24 @@ def queue(
         r.reporter_id: db.get(User, r.reporter_id)
         for r in [*open_reports, *closed_reports]
     }
+    held = db.scalars(
+        select(ScreenItem)
+        .where(ScreenItem.status == "escalated")
+        .order_by(ScreenItem.created_at)
+    ).all()
+    held_ideas = {i.ref: db.get(Idea, i.ref) for i in held if i.kind == "idea"}
+    held_users = {i.user_id: db.get(User, i.user_id) for i in held}
+    waiting_for_agent = (
+        db.scalar(select(func.count(ScreenItem.id)).where(ScreenItem.status == "pending")) or 0
+    )
     return render(
         request,
         "moderation.html",
         {
+            "held": held,
+            "held_ideas": held_ideas,
+            "held_users": held_users,
+            "waiting_for_agent": waiting_for_agent,
             "pending_ideas": pending_ideas,
             "pending_owners": pending_owners,
             "open_reports": open_reports,
@@ -83,6 +98,40 @@ def queue(
         },
         user=user,
     )
+
+
+def _close_screen(db: Session, idea_id: str, status: str, note: str, staff: User) -> None:
+    """A moderator reviewing an idea also settles its screening item."""
+    for item in db.scalars(
+        select(ScreenItem).where(
+            ScreenItem.kind == "idea",
+            ScreenItem.ref == idea_id,
+            ScreenItem.status.in_(("pending", "escalated")),
+        )
+    ):
+        item.status = status
+        item.reason = note[:2000]
+        item.decided_by = staff.id
+        item.decided_at = utc_now()
+        db.add(item)
+
+
+@router.post("/moderation/screening/{item_id}/{decision}")
+def decide_screen(
+    item_id: str,
+    decision: str,
+    note: str = Form(default=""),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("ideas.review")),
+):
+    item = db.get(ScreenItem, item_id)
+    status = {"approve": "approved", "reject": "rejected"}.get(decision)
+    if item is None or status is None:
+        return RedirectResponse("/moderation?err=Item+not+found", status_code=303)
+    if not screening.apply(db, item, status, note, user, by_agent=False):
+        return RedirectResponse("/moderation?err=Already+decided", status_code=303)
+    db.commit()
+    return RedirectResponse("/moderation?msg=Decision+saved", status_code=303)
 
 
 @router.post("/moderation/ideas/{idea_id}/approve")
@@ -100,6 +149,7 @@ def approve_idea(
     idea.published_at = utc_now()
     idea.updated_at = utc_now()
     db.add(idea)
+    _close_screen(db, idea.id, "approved", "", user)
     audit.record(db, user, "idea.approve", "idea", idea.id, idea.title)
     db.commit()
     return RedirectResponse("/moderation?msg=Idea+approved+and+published", status_code=303)
@@ -119,6 +169,7 @@ def reject_idea(
     idea.review_note = note.strip()[:2000]
     idea.updated_at = utc_now()
     db.add(idea)
+    _close_screen(db, idea.id, "rejected", note.strip(), user)
     audit.record(db, user, "idea.reject", "idea", idea.id, note.strip()[:200])
     db.commit()
     return RedirectResponse("/moderation?msg=Idea+rejected", status_code=303)
