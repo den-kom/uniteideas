@@ -1,16 +1,11 @@
 {# Shared idea components. Import with: {% from "_ideas.html" import vote_arrows, idea_card with context %} #}
 
-{# Placeholder bulb until the final design is chosen. Level 1 (dimmest) to 10 (brightest). #}
+{# Light bulb, level 1 (dimmest) to 10 (brightest, top 10% of ideas). Both themes are drawn; CSS shows the right one. #}
 {% macro bulb(level=1) %}
-<svg class="bulb glow-{{ level }}" viewBox="0 0 120 160" aria-hidden="true" focusable="false">
-  <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M60 10 C34 10 18 30 18 54 C18 72 27 84 37 96 C41 101 42 106 42 112 L78 112 C78 106 79 101 83 96 C93 84 102 72 102 54 C102 30 86 10 60 10 Z"/>
-    <path d="M38 38 q5 -5 10 0 t10 0 t10 0 t10 0" stroke-width="3.6"/>
-    <path d="M38 50 q5 -5 10 0 t10 0 t10 0 t10 0" stroke-width="3.6"/>
-    <path d="M38 62 q5 -5 10 0 t10 0 t10 0 t10 0" stroke-width="3.6"/>
-    <path d="M44 120 H76 M44 130 H76 M46 140 H74"/>
-  </g>
-</svg>
+<span class="bulb-wrap glow-{{ level }}" aria-hidden="true">
+  <img class="bulb bulb-dark" src="/static/bulbs/dark-{{ level }}.svg" alt="" width="63" height="70" loading="lazy" decoding="async" />
+  <img class="bulb bulb-light" src="/static/bulbs/light-{{ level }}.svg" alt="" width="63" height="70" loading="lazy" decoding="async" />
+</span>
 {% endmacro %}
 
 {% macro vote_arrows(idea, my_vote=None, next_url="/", show_score=False) %}
@@ -45,7 +40,7 @@
 {% endmacro %}
 
 {% macro idea_card(idea, my_vote=None, next_url="/") %}
-<article class="idea-card" id="idea-{{ idea.id }}" data-vote>
+<article class="idea-card{{ ' top-glow' if idea.glow_level == 10 else '' }}" id="idea-{{ idea.id }}" data-vote>
   <div class="idea-glow" title="Brightness {{ idea.glow_level }} of 10, updated daily">
     {{ bulb(idea.glow_level) }}
     <span class="vote-score{{ ' is-negative' if idea.score < 0 else '' }}" data-score>{{ idea.score }}</span>

@@ -247,9 +247,9 @@ def sparkles(c: str) -> str:
 
 
 # 6b -- the chosen look: neon tube outline, horizontal mirror-symmetric coil, grey support wires
-def d6b(b: float, theme: str = "dark", aura: bool | None = None) -> str:
+def d6b(b: float, theme: str = "dark", aura: bool | None = None, aura_r: float = 150) -> str:
     if theme == "light":
-        return d6b_light(b, aura)
+        return d6b_light(b, aura, aura_r)
     u, col = "d6b", glow_colour(b)
     if aura is None:
         aura = b >= 0.9  # the top 10% of ideas also light up the space around them
@@ -268,7 +268,7 @@ def d6b(b: float, theme: str = "dark", aura: bool | None = None) -> str:
     # Two thin wires rise from the base, bend out to each end of the coil, and a short cross-wire holds the stem.
     wires = "M52 112 V90 L38 63 M68 112 V90 L82 63"
     return wrap(
-        (halo(u + "o", 0.55, r=150, cy=70) if aura else "")
+        (halo(u + "o", 0.55, r=aura_r, cy=70) if aura else "")
         + halo(u, b * 0.7, r=84 if b > 0.4 else 70)
         + f'<defs><radialGradient id="{u}in" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="{core}" stop-opacity="{0.04 + 0.34 * b:.2f}"/>'
         + f'<stop offset="1" stop-color="{col}" stop-opacity="{0.02 + 0.12 * b:.2f}"/></radialGradient>' + glow_filter(u + "g", 1.6 + 3.4 * b) + "</defs>"
@@ -296,7 +296,7 @@ def _coil_path() -> str:
 
 # 6b on a light background: a lit glass bulb. Pale and grey when dim, saturated yellow and orange
 # when bright, with a warm soft shadow-glow instead of the neon bloom (which would vanish on white).
-def d6b_light(b: float, aura: bool | None = None) -> str:
+def d6b_light(b: float, aura: bool | None = None, aura_r: float = 150) -> str:
     u = "d6l"
     if aura is None:
         aura = b >= 0.9
@@ -308,7 +308,7 @@ def d6b_light(b: float, aura: bool | None = None) -> str:
     outer = (
         f'<radialGradient id="{u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb62e" stop-opacity=".55"/>'
         '<stop offset="1" stop-color="#ffb62e" stop-opacity="0"/></radialGradient>'
-        f'<circle cx="60" cy="70" r="150" fill="url(#{u}o)"/>'
+        f'<circle cx="60" cy="70" r="{aura_r}" fill="url(#{u}o)"/>'
         if aura else ""
     )
     return wrap(
@@ -481,6 +481,25 @@ def levels_sheet(theme: str = "dark") -> str:
         f'<div class="grid">{cells}</div>'
     )
 
+
+def export_site(out: Path) -> None:
+    """Write the ten levels in both themes as standalone SVG files for the site.
+
+    The viewBox is padded (-40 -30 200 220) so the halo is not clipped; the aura on level 10 is sized
+    to fade out inside that box. The site's CSS undoes the padding with negative margins.
+    """
+    out.mkdir(parents=True, exist_ok=True)
+    for theme in ("dark", "light"):
+        for level in range(1, 11):
+            svg = d6b((level - 0.5) / 10, theme, aura=(level == 10), aura_r=98)
+            svg = svg.replace(f'viewBox="0 0 {W} {H}" width="{W*2}" height="{H*2}" style="overflow:visible"', 'viewBox="-40 -30 200 220" width="200" height="220"')
+            (out / f"{theme}-{level}.svg").write_text(svg)
+    print("exported", out)
+
+
+if __name__ == "__main__" and "--export" in sys.argv:
+    export_site(Path(__file__).resolve().parents[1] / "app" / "static" / "bulbs")
+    raise SystemExit(0)
 
 if __name__ == "__main__":
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/claude-0/bulbs")

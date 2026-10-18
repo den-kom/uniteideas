@@ -358,30 +358,24 @@ h2 { font-weight: 700; letter-spacing: -0.01em; }
 }
 .idea-card:target { border-color: var(--accent); }
 .idea-glow { flex: 0 0 56px; display: flex; flex-direction: column; align-items: center; gap: 4px; align-self: center; }
-.bulb { width: 38px; height: 50px; overflow: visible; }
+/* The bulb pictures carry extra space around them for the glow (viewBox -40 -30 200 220), which the negative
+   margins give back, so the visible bulb is --bw wide. Ten levels, one per 10% of ideas; level 10 also lights its card. */
+.bulb-wrap { --bw: 38px; display: block; width: var(--bw); height: calc(var(--bw) * 4 / 3); position: relative; }
+.bulb { position: absolute; left: calc(var(--bw) * -1 / 3); top: calc(var(--bw) * -1 / 4); width: calc(var(--bw) * 5 / 3); height: auto; max-width: none; pointer-events: none; }
+.bulb-light { display: none; }
+[data-theme="light"] .bulb-dark { display: none; }
+[data-theme="light"] .bulb-light { display: block; }
+.idea-card.top-glow {
+  border-color: rgba(255, 214, 120, .55);
+  background: radial-gradient(120% 140% at 8% 50%, rgba(255, 200, 90, .16), var(--card) 60%);
+  box-shadow: 0 0 0 1px rgba(255, 214, 120, .4), 0 0 36px 6px rgba(255, 190, 70, .30), 0 0 90px 18px rgba(255, 170, 40, .14);
+}
+[data-theme="light"] .idea-card.top-glow {
+  border-color: rgba(240, 140, 20, .55);
+  background: radial-gradient(120% 140% at 8% 50%, rgba(255, 196, 70, .34), var(--card) 62%);
+  box-shadow: 0 0 0 1px rgba(240, 140, 20, .4), 0 0 30px 4px rgba(255, 170, 40, .36), 0 0 80px 14px rgba(255, 150, 20, .16);
+}
 
-/* ten brightness levels, one per 10% of ideas (placeholder colours until the design is chosen) */
-.glow-1  { color: #5c4526; }
-.glow-2  { color: #6e5026; }
-.glow-3  { color: #85602a; }
-.glow-4  { color: #a07230; }
-.glow-5  { color: #c0862f; filter: drop-shadow(0 0 2px #c0862f66); }
-.glow-6  { color: #dd9c2e; filter: drop-shadow(0 0 3px #dd9c2e88); }
-.glow-7  { color: #f3ae2f; filter: drop-shadow(0 0 4px #f3ae2fa0); }
-.glow-8  { color: #ffc04a; filter: drop-shadow(0 0 5px #ffc04ab0); }
-.glow-9  { color: #ffd36e; filter: drop-shadow(0 0 7px #ffd36ec0); }
-.glow-10 { color: #ffe7a6; filter: drop-shadow(0 0 9px #ffe7a6d0); }
-[data-theme="light"] .glow-1  { color: #cfc6b4; }
-[data-theme="light"] .glow-2  { color: #d6c49a; }
-[data-theme="light"] .glow-3  { color: #dcc47a; }
-[data-theme="light"] .glow-4  { color: #e3c05a; }
-[data-theme="light"] .glow-5  { color: #e8b73f; filter: none; }
-[data-theme="light"] .glow-6  { color: #eeab2b; filter: none; }
-[data-theme="light"] .glow-7  { color: #f29c1d; filter: none; }
-[data-theme="light"] .glow-8  { color: #f58b12; filter: none; }
-[data-theme="light"] .glow-9  { color: #f27a0c; filter: none; }
-[data-theme="light"] .glow-10 { color: #ee6a08; filter: none; }
-.idea-main { min-width: 0; flex: 1; }
 .idea-card h3 { font-size: 18px; line-height: 1.3; margin: 2px 0 4px; }
 .idea-card h3 a { color: var(--ink); text-decoration: none; }
 .idea-card h3 a:hover { color: var(--accent); text-decoration: underline; }
@@ -403,7 +397,7 @@ a.chip:hover { border-color: var(--accent); color: var(--accent); }
 @media (max-width: 520px) {
   .idea-card { gap: 10px; padding: 12px; }
   .idea-glow { flex-basis: 44px; }
-  .bulb { width: 32px; height: 42px; }
+  .bulb-wrap { --bw: 32px; }
   .vote-arrow { width: 30px; height: 26px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -539,3 +533,5 @@ td form.inline select { width: auto; margin: 0; padding: 5px 8px; font-size: 13p
 .chip.picked { display: inline-flex; align-items: center; gap: 6px; }
 .chip.picked.custom { border-style: dashed; }
 .chip-x { background: none; border: 0; color: inherit; font-size: 1.1em; line-height: 1; cursor: pointer; padding: 0 2px; }
+.idea-main { min-width: 0; flex: 1; }
+.idea-main, .vote { position: relative; z-index: 1; }
