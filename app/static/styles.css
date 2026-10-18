@@ -172,7 +172,7 @@ button.link:hover { color: var(--ink); text-decoration: underline; }
   padding: 18px;
   margin-bottom: 14px;
 }
-.card.dev { background: #fffbeb; border-color: #fde68a; }
+.card.dev { background: rgba(253, 176, 46, .10); border-color: rgba(253, 176, 46, .4); }
 .ok-card { background: var(--ok-bg); border-color: #a7f3d0; }
 .bad-card { background: var(--bad-bg); border-color: #fecaca; }
 
