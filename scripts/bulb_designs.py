@@ -236,6 +236,34 @@ def d6(b: float) -> str:
     )
 
 
+
+# 6b -- the chosen look: neon tube outline and base, horizontal coil (as in 3), grey support wires
+def d6b(b: float, theme: str = "dark") -> str:
+    u, col = "d6b", glow_colour(b)
+    core = glow_colour(min(1, b + 0.3))
+    wire = "#9a9a9a" if theme == "dark" else "#6f6f6f"
+    pts = []
+    for i in range(0, 241):
+        t = i / 240 * 6 * math.pi
+        x = 38 + 44 * i / 240 + 6.5 * math.cos(t)
+        y = 54 + 9 * math.sin(t)
+        pts.append(f"{x:.1f} {y:.1f}")
+    coil = "M" + " L".join(pts)
+    # Two thin wires rise from the base, bend out to each end of the coil, and a short cross-wire holds the stem.
+    wires = "M52 112 V90 L44.5 56 M68 112 V90 L88.5 56"
+    return wrap(
+        halo(u, b)
+        + f"<defs>{glow_filter(u + 'g', 1.6 + 3 * b)}</defs>"
+        + f'<path d="{wires}" fill="none" stroke="{wire}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
+        + f'<circle cx="52" cy="90" r="1.6" fill="{wire}"/><circle cx="68" cy="90" r="1.6" fill="{wire}"/>'
+        + f'<g filter="url(#{u}g)" fill="none" stroke-linecap="round" stroke-linejoin="round">'
+        + f'<path d="{BULB}" stroke="{col}" stroke-width="6" opacity=".55"/>'
+        + f'<path d="{BULB}" stroke="{core}" stroke-width="1.8"/>'
+        + f'<path d="{coil}" stroke="{col}" stroke-width="3.4" opacity=".55"/><path d="{coil}" stroke="{core}" stroke-width="1.4"/>'
+        + f'<g stroke="{col}" stroke-width="3"><path d="M44 119 H76"/><path d="M44 128 H76"/><path d="M45 137 H75"/><path d="M50 146 H70"/></g>'
+        + "</g>"
+    )
+
 # 7 -- Technical cutaway: thin line art, glass stem, compact coil on two posts
 def d7(b: float) -> str:
     u, col = "d7", glow_colour(b)
@@ -352,10 +380,26 @@ def gallery(b: float = 0.5, theme: str = "dark") -> str:
     )
 
 
+def levels_sheet(theme: str = "dark") -> str:
+    bg = "#14110d" if theme == "dark" else "#fbf7ee"
+    fg = "#e8dcc5" if theme == "dark" else "#3a2f1e"
+    cells = "".join(
+        f'<figure><div class="art">{d6b((n - 0.5) / 10, theme)}</div><figcaption>{n}</figcaption></figure>' for n in range(1, 11)
+    )
+    return (
+        f'<!doctype html><meta charset="utf-8"><style>body{{margin:0;background:{bg};color:{fg};font:15px system-ui;padding:24px}}'
+        '.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}figure{margin:0;text-align:center}'
+        '.art svg{width:100%;height:auto;max-width:200px}</style>'
+        f'<div class="grid">{cells}</div>'
+    )
+
+
 if __name__ == "__main__":
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/claude-0/bulbs")
     out.mkdir(parents=True, exist_ok=True)
     (out / "gallery.html").write_text(gallery(0.5, "dark"))
     for num, _label, fn in DESIGNS:
         (out / f"bulb-{num}.svg").write_text(fn(0.5))
+    (out / "bulb-6b.svg").write_text(d6b(0.5))
+    (out / "levels-dark.html").write_text(levels_sheet("dark"))
     print("wrote", out)
