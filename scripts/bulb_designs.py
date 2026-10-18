@@ -312,15 +312,12 @@ def d6b_light(b: float, aura: bool | None = None, aura_r: float = 150) -> str:
         if aura else ""
     )
     return wrap(
-        outer
-        + f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity="{0.2 * b:.2f}"/>'
+        f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity="{0.2 * b:.2f}"/>'
         + '<stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>'
         + f'<radialGradient id="{u}f" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#ffe45c" stop-opacity="{0.1 + 0.9 * b:.2f}"/>'
         + f'<stop offset="1" stop-color="{fill}" stop-opacity="{0.05 + 0.85 * b:.2f}"/></radialGradient>'
         + f'<filter id="{u}g" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="{1.5 + 3 * b:.1f}"/></filter></defs>'
-        + f'<circle cx="60" cy="56" r="78" fill="url(#{u}h)"/>'
         + f'<path d="{BULB}" fill="url(#{u}f)"/>'
-        + f'<path d="{BULB}" fill="none" stroke="#ffd830" stroke-width="7" opacity="{0.22 * b:.2f}" filter="url(#{u}g)"/>'
         + f'<path d="M52 112 V90 L38 63 M68 112 V90 L82 63" fill="none" stroke="{wire}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
         + f'<circle cx="52" cy="90" r="1.6" fill="{wire}"/><circle cx="68" cy="90" r="1.6" fill="{wire}"/>'
         + f'<path d="{BULB}" fill="none" stroke="{line}" stroke-width="2.6" stroke-linejoin="round"/>'
