@@ -238,6 +238,7 @@ def d6(b: float) -> str:
 
 
 # 6b -- the chosen look: neon tube outline and base, horizontal coil (as in 3), grey support wires
+# 6b -- the chosen look: neon tube outline and base, horizontal coil (as in 3), grey support wires
 def sparkles(c: str) -> str:
     """Four tiny stars around a top-10% bulb."""
     def star(x, y, r):
@@ -265,9 +266,8 @@ def d6b(b: float, theme: str = "dark", aura: bool | None = None) -> str:
     # Two thin wires rise from the base, bend out to each end of the coil, and a short cross-wire holds the stem.
     wires = "M52 112 V90 L38 63 M68 112 V90 L82 63"
     return wrap(
-        (halo(u + "o", 1.0, r=170, cy=70) if aura else "")
-        + (sparkles(core) if aura else "")
-        + halo(u, min(1.0, b * 1.15), r=96 if b > 0.4 else 78)
+        (halo(u + "o", 0.55, r=150, cy=70) if aura else "")
+        + halo(u, b * 0.7, r=84 if b > 0.4 else 70)
         + f'<defs><radialGradient id="{u}in" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="{core}" stop-opacity="{0.04 + 0.34 * b:.2f}"/>'
         + f'<stop offset="1" stop-color="{col}" stop-opacity="{0.02 + 0.12 * b:.2f}"/></radialGradient>' + glow_filter(u + "g", 1.6 + 3.4 * b) + "</defs>"
         + f'<path d="{BULB}" fill="url(#{u}in)"/>'
