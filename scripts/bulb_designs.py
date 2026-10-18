@@ -238,8 +238,18 @@ def d6(b: float) -> str:
 
 
 # 6b -- the chosen look: neon tube outline and base, horizontal coil (as in 3), grey support wires
-def d6b(b: float, theme: str = "dark") -> str:
+def sparkles(c: str) -> str:
+    """Four tiny stars around a top-10% bulb."""
+    def star(x, y, r):
+        return f'<path d="M{x} {y-r} L{x+r*.22:.1f} {y-r*.22:.1f} L{x+r} {y} L{x+r*.22:.1f} {y+r*.22:.1f} L{x} {y+r} L{x-r*.22:.1f} {y+r*.22:.1f} L{x-r} {y} L{x-r*.22:.1f} {y-r*.22:.1f} Z" fill="{c}" opacity=".85"/>'
+    return star(-8, 20, 6) + star(130, 30, 5) + star(138, 96, 4) + star(-14, 92, 4)
+
+
+# 6b -- the chosen look: neon tube outline, horizontal mirror-symmetric coil, grey support wires
+def d6b(b: float, theme: str = "dark", aura: bool | None = None) -> str:
     u, col = "d6b", glow_colour(b)
+    if aura is None:
+        aura = b >= 0.9  # the top 10% of ideas also light up the space around them
     core = glow_colour(min(1, b + 0.3))
     wire = "#9a9a9a" if theme == "dark" else "#6f6f6f"
     pts = []
@@ -255,15 +265,20 @@ def d6b(b: float, theme: str = "dark") -> str:
     # Two thin wires rise from the base, bend out to each end of the coil, and a short cross-wire holds the stem.
     wires = "M52 112 V90 L38 63 M68 112 V90 L82 63"
     return wrap(
-        halo(u, b)
-        + f"<defs>{glow_filter(u + 'g', 1.6 + 3 * b)}</defs>"
+        (halo(u + "o", 1.0, r=170, cy=70) if aura else "")
+        + (sparkles(core) if aura else "")
+        + halo(u, min(1.0, b * 1.15), r=96 if b > 0.4 else 78)
+        + f'<defs><radialGradient id="{u}in" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="{core}" stop-opacity="{0.04 + 0.34 * b:.2f}"/>'
+        + f'<stop offset="1" stop-color="{col}" stop-opacity="{0.02 + 0.12 * b:.2f}"/></radialGradient>' + glow_filter(u + "g", 1.6 + 3.4 * b) + "</defs>"
+        + f'<path d="{BULB}" fill="url(#{u}in)"/>'
         + f'<path d="{wires}" fill="none" stroke="{wire}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
         + f'<circle cx="52" cy="90" r="1.6" fill="{wire}"/><circle cx="68" cy="90" r="1.6" fill="{wire}"/>'
         + f'<g filter="url(#{u}g)" fill="none" stroke-linecap="round" stroke-linejoin="round">'
         + f'<path d="{BULB}" stroke="{col}" stroke-width="6" opacity=".55"/>'
         + f'<path d="{BULB}" stroke="{core}" stroke-width="1.8"/>'
         + f'<path d="{coil}" stroke="{col}" stroke-width="3.4" opacity=".55"/><path d="{coil}" stroke="{core}" stroke-width="1.4"/>'
-        + f'<g stroke="{col}" stroke-width="3"><path d="M44 119 H76"/><path d="M44 128 H76"/><path d="M45 137 H75"/><path d="M50 146 H70"/></g>'
+        + f'<g stroke="{col}" stroke-width="5" opacity=".55"><path d="M43.5 120 H76.5"/><path d="M43.5 129 H76.5"/><path d="M43.5 138 H76.5"/><path d="M50 147 H70"/></g>'
+        + f'<g stroke="{core}" stroke-width="1.8"><path d="M43.5 120 H76.5"/><path d="M43.5 129 H76.5"/><path d="M43.5 138 H76.5"/><path d="M50 147 H70"/></g>'
         + "</g>"
     )
 
@@ -383,6 +398,18 @@ def gallery(b: float = 0.5, theme: str = "dark") -> str:
     )
 
 
+def card_mock(level: int) -> str:
+    b = (level - 0.5) / 10
+    glow = ("box-shadow:0 0 0 1px rgba(255,214,120,.55),0 0 36px 6px rgba(255,190,70,.38),0 0 90px 18px rgba(255,170,40,.2);"
+            "background:radial-gradient(120% 140% at 12% 50%,rgba(255,200,90,.16),#1f1b16 60%);" if level == 10 else "background:#1f1b16;")
+    return (
+        f'<div style="display:flex;align-items:center;gap:14px;width:420px;padding:16px 18px;border-radius:14px;border:1px solid #3a3228;{glow}">'
+        f'<div class="m" style="width:78px;text-align:center;flex:none">{d6b(b)}<div style="font-size:20px;margin-top:2px">{[3,9,14,21,34,45,60,88,130,212][level-1]}</div></div>'
+        '<div><div style="font-weight:600;font-size:18px">Shared tool library for apartment blocks</div>'
+        '<div style="opacity:.7;font-size:14px;margin-top:6px">A booking board so neighbours can lend each other drills and ladders.</div></div></div>'
+    )
+
+
 def levels_sheet(theme: str = "dark") -> str:
     bg = "#14110d" if theme == "dark" else "#fbf7ee"
     fg = "#e8dcc5" if theme == "dark" else "#3a2f1e"
@@ -405,4 +432,8 @@ if __name__ == "__main__":
         (out / f"bulb-{num}.svg").write_text(fn(0.5))
     (out / "bulb-6b.svg").write_text(d6b(0.5))
     (out / "levels-dark.html").write_text(levels_sheet("dark"))
+    (out / "cards.html").write_text(
+        '<style>.m svg{width:78px;height:auto}</style><body style="margin:0;background:#14110d;color:#f4eee4;font:15px system-ui;padding:60px 70px;display:flex;flex-direction:column;gap:46px;align-items:flex-start">'
+        + card_mock(5) + card_mock(10) + "</body>"
+    )
     print("wrote", out)
