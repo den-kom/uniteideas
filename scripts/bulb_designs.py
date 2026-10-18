@@ -306,21 +306,21 @@ def d6b_light(b: float, aura: bool | None = None, aura_r: float = 150) -> str:
     wire = "#7a7a7a"
     bars = f'<path d="M43.5 120 H76.5"/><path d="M43.5 129 H76.5"/><path d="M43.5 138 H76.5"/><path d="M50 147 H70"/>'
     outer = (
-        f'<radialGradient id="{u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb62e" stop-opacity=".55"/>'
-        '<stop offset="1" stop-color="#ffb62e" stop-opacity="0"/></radialGradient>'
+        f'<radialGradient id="{u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity=".22"/>'
+        '<stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>'
         f'<circle cx="60" cy="70" r="{aura_r}" fill="url(#{u}o)"/>'
         if aura else ""
     )
     return wrap(
         outer
-        + f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb62e" stop-opacity="{0.42 * b:.2f}"/>'
-        + '<stop offset="1" stop-color="#ffb62e" stop-opacity="0"/></radialGradient>'
+        + f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity="{0.2 * b:.2f}"/>'
+        + '<stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>'
         + f'<radialGradient id="{u}f" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#ffe45c" stop-opacity="{0.1 + 0.9 * b:.2f}"/>'
         + f'<stop offset="1" stop-color="{fill}" stop-opacity="{0.05 + 0.85 * b:.2f}"/></radialGradient>'
         + f'<filter id="{u}g" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="{1.5 + 3 * b:.1f}"/></filter></defs>'
         + f'<circle cx="60" cy="56" r="78" fill="url(#{u}h)"/>'
         + f'<path d="{BULB}" fill="url(#{u}f)"/>'
-        + f'<path d="{BULB}" fill="none" stroke="#ff9d1c" stroke-width="7" opacity="{0.5 * b:.2f}" filter="url(#{u}g)"/>'
+        + f'<path d="{BULB}" fill="none" stroke="#ffd830" stroke-width="7" opacity="{0.22 * b:.2f}" filter="url(#{u}g)"/>'
         + f'<path d="M52 112 V90 L38 63 M68 112 V90 L82 63" fill="none" stroke="{wire}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
         + f'<circle cx="52" cy="90" r="1.6" fill="{wire}"/><circle cx="68" cy="90" r="1.6" fill="{wire}"/>'
         + f'<path d="{BULB}" fill="none" stroke="{line}" stroke-width="2.6" stroke-linejoin="round"/>'
@@ -454,8 +454,8 @@ def card_mock(level: int, theme: str = "dark") -> str:
             "box-shadow:0 0 0 1px rgba(255,214,120,.55),0 0 36px 6px rgba(255,190,70,.38),0 0 90px 18px rgba(255,170,40,.2);"
             f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,200,90,.16),{base} 60%);"
             if dark
-            else "box-shadow:0 0 0 1px rgba(240,140,20,.55),0 0 30px 4px rgba(255,170,40,.42),0 0 80px 14px rgba(255,150,20,.2);"
-            f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,196,70,.34),{base} 62%);"
+            else "box-shadow:0 0 0 1px rgba(214,168,20,.55),0 0 28px 4px rgba(255,214,60,.30),0 0 70px 12px rgba(255,220,80,.14);"
+            f"background:radial-gradient(120% 140% at 12% 50%,rgba(255,226,90,.26),{base} 62%);"
         )
     else:
         glow = f"background:{base};"
