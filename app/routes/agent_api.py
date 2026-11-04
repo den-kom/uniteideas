@@ -1,9 +1,9 @@
 """Scoped API for AgentBob.
 
-Today this only answers a ping, so AgentBob can confirm its token works and who it acts as.
-The old proof-of-concept build queue was removed with the old POC builder. New endpoints
-(moderation triage, similarity suggestions, health) are added here when AgentBob gets those jobs.
-Everything AgentBob does should be recorded under its own account (user-agentbob).
+AgentBob is the site's moderation assistant. Its whole reach is: ping, take items to look at, confirm
+or escalate them, and flag an idea for a moderator. It cannot reject, remove, approve something a
+rule or person already held, read sealed text, or manage accounts. Everything it does is recorded
+under its own account (user-agentbob).
 """
 
 from __future__ import annotations
@@ -18,7 +18,8 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app import screening
-from app.models import ScreenItem, User
+from app import audit
+from app.models import Idea, Report, ScreenItem, User
 from app.system_users import AGENTBOB_ID
 
 router = APIRouter(prefix="/api/agent")
@@ -82,3 +83,32 @@ def screen_decide(
         raise HTTPException(status_code=409, detail="decision not allowed")
     db.commit()
     return {"ok": True, "status": item.status}
+
+
+class Flag(BaseModel):
+    idea_id: str
+    reason: str
+
+
+@router.post("/flag")
+def flag_idea(
+    body: Flag,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_agent),
+) -> dict:
+    """AgentBob reports an idea to the moderators, like a member's report. A person decides."""
+    bot = db.get(User, AGENTBOB_ID)
+    idea = db.get(Idea, body.idea_id)
+    reason = body.reason.strip()[:2000]
+    if bot is None or idea is None or not reason:
+        raise HTTPException(status_code=404, detail="no such idea, or no reason given")
+    already = db.scalar(
+        select(Report.id).where(Report.idea_id == idea.id, Report.reporter_id == bot.id, Report.status == "open")
+    )
+    if already:
+        return {"ok": True, "report_id": already, "duplicate": True}
+    report = Report(idea_id=idea.id, reporter_id=bot.id, reason=reason)
+    db.add(report)
+    audit.record(db, bot, "agent.flag", "idea", idea.id, reason[:200])
+    db.commit()
+    return {"ok": True, "report_id": report.id, "duplicate": False}

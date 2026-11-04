@@ -1,9 +1,11 @@
 """What each role may do. Roles are coarse on purpose; permissions are the unit checked in code.
 
 user        ordinary member
-moderator   reviews first submissions and reports; cannot manage accounts
-admin       everything a moderator can, plus accounts, the audit log and system tools
-bot         service accounts (AgentBob); no sign-in, acts only through the agent API
+moderator   reviews held ideas and reports; cannot manage accounts. May not decide on their own ideas.
+admin       everything a moderator can, plus accounts, the audit log and system tools. An admin is
+            also an ordinary member with the same account; the admin tools live on /admin.
+bot         AgentBob: no sign-in, acts only through the agent API. Moderation scope only: look at
+            items, confirm or escalate them, flag ideas. Cannot reject, remove or manage anyone.
 """
 
 from __future__ import annotations

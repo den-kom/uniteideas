@@ -2,8 +2,10 @@
 
 Ideas and custom skills are queued as ScreenItems. A built-in word check gives a first verdict:
 clean text is approved, text that touches a blocked topic is escalated to a moderator. When
-SCREENING_MODE=agent, clean text waits for AgentBob (through /api/agent/screen) instead, and
-AgentBob either approves it or escalates it. Nobody but a person can reject escalated items.
+SCREENING_MODE=agent, AgentBob also takes a second look (through /api/agent/screen) AFTER the text
+is live: it either confirms it or escalates it, which hides the idea or skill and sends it to a
+moderator. Clean text never waits for a person or for AgentBob, so nobody is stuck overnight.
+Nobody but a person can reject, and only a person can approve something already escalated.
 """
 
 from __future__ import annotations
@@ -60,7 +62,7 @@ def _decide(db: Session, item: ScreenItem, status: str, reason: str, by: str) ->
     db.add(item)
 
 
-def queue_idea(db: Session, idea: Idea, extra_text: str = "", trusted: bool = False) -> ScreenItem:
+def queue_idea(db: Session, idea: Idea, extra_text: str = "") -> ScreenItem:
     """Queue a new idea. `extra_text` (sealed detail) is checked by the word check only, never sent to AgentBob."""
     text = "\n\n".join(part for part in (idea.title, idea.summary, idea.public_body) if part)
     item = ScreenItem(kind="idea", ref=idea.id, user_id=idea.owner_id, text=text[:20000])
@@ -70,9 +72,10 @@ def queue_idea(db: Session, idea: Idea, extra_text: str = "", trusted: bool = Fa
         _decide(db, item, "escalated", reason, "rules")
     elif get_settings().screening_mode == "rules":
         _decide(db, item, "approved", "", "rules")
-    # else: stays pending for AgentBob
-    idea.status = STATUS_PENDING
-    if item.status == "approved" and trusted:
+    # else: stays pending as a to-do for AgentBob's second look; the idea is live meanwhile
+    if verdict == "escalated":
+        idea.status = STATUS_PENDING
+    else:
         idea.status = STATUS_PUBLISHED
         idea.published_at = utc_now()
     db.add(idea)
@@ -90,15 +93,16 @@ def queue_skill(db: Session, user: User, text: str) -> ScreenItem:
     elif get_settings().screening_mode == "rules":
         _decide(db, item, "approved", "", "rules")
     if row is not None:
-        row.status = "approved" if item.status == "approved" else "pending"
+        row.status = "pending" if verdict == "escalated" else "approved"
     return item
 
 
 def apply(db: Session, item: ScreenItem, status: str, reason: str, actor: User, by_agent: bool) -> bool:
     """Record a decision on a pending or escalated item. Returns False when the decision is not allowed.
 
-    AgentBob may approve or escalate. Only a person may reject, and only a person may approve
-    something already escalated.
+    AgentBob may confirm or escalate. Escalating something that is already live hides it until
+    a moderator decides. Only a person may reject, and only a person may approve something
+    already escalated.
     """
     if status not in {"approved", "escalated", "rejected"}:
         return False
@@ -110,16 +114,15 @@ def apply(db: Session, item: ScreenItem, status: str, reason: str, actor: User, 
 
     if item.kind == "idea":
         idea = db.get(Idea, item.ref)
-        if idea is not None and idea.status == STATUS_PENDING:
-            if status == "approved":
-                # A person approving it has reviewed it; AgentBob's approval only passes the word check
-                # and an account's first idea still goes to a moderator.
-                trusted = not by_agent or _has_published(db, idea)
-                if trusted:
-                    idea.status = STATUS_PUBLISHED
-                    idea.published_at = utc_now()
-                    idea.updated_at = utc_now()
-            elif status == "rejected":
+        if idea is not None:
+            if status == "approved" and idea.status == STATUS_PENDING:
+                idea.status = STATUS_PUBLISHED
+                idea.published_at = utc_now()
+                idea.updated_at = utc_now()
+            elif status == "escalated" and idea.status == STATUS_PUBLISHED:
+                idea.status = STATUS_PENDING  # hidden until a moderator looks
+                idea.updated_at = utc_now()
+            elif status == "rejected" and idea.status in (STATUS_PENDING, STATUS_PUBLISHED):
                 idea.status = STATUS_REMOVED
                 idea.review_note = reason[:2000] or "Not allowed on UniteIdeas."
                 idea.updated_at = utc_now()
@@ -139,14 +142,3 @@ def apply(db: Session, item: ScreenItem, status: str, reason: str, actor: User, 
     audit.record(db, actor, f"screen.{status}", item.kind, item.ref, reason[:200])
     return True
 
-
-def _has_published(db: Session, idea: Idea) -> bool:
-    from sqlalchemy import func
-
-    return bool(
-        db.scalar(
-            select(func.count(Idea.id)).where(
-                Idea.owner_id == idea.owner_id, Idea.status == STATUS_PUBLISHED, Idea.id != idea.id
-            )
-        )
-    )

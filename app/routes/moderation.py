@@ -11,6 +11,7 @@ from app.db import get_db
 from app.models import (
     STATUS_PENDING,
     STATUS_PUBLISHED,
+    ROLE_MODERATOR,
     STATUS_REMOVED,
     Idea,
     Report,
@@ -100,6 +101,11 @@ def queue(
     )
 
 
+def _own_content(user: User, owner_id: str) -> bool:
+    """A moderator may not decide on their own ideas. Admins may (they are the last line), and it is logged."""
+    return user.role == ROLE_MODERATOR and owner_id == user.id
+
+
 def _close_screen(db: Session, idea_id: str, status: str, note: str, staff: User) -> None:
     """A moderator reviewing an idea also settles its screening item."""
     for item in db.scalars(
@@ -128,6 +134,8 @@ def decide_screen(
     status = {"approve": "approved", "reject": "rejected"}.get(decision)
     if item is None or status is None:
         return RedirectResponse("/moderation?err=Item+not+found", status_code=303)
+    if _own_content(user, item.user_id):
+        return RedirectResponse("/moderation?err=Ask+another+moderator+to+review+your+own+content", status_code=303)
     if not screening.apply(db, item, status, note, user, by_agent=False):
         return RedirectResponse("/moderation?err=Already+decided", status_code=303)
     db.commit()
@@ -143,6 +151,8 @@ def approve_idea(
     idea = db.get(Idea, idea_id)
     if idea is None:
         return RedirectResponse("/moderation?err=Idea+not+found", status_code=303)
+    if _own_content(user, idea.owner_id):
+        return RedirectResponse("/moderation?err=Ask+another+moderator+to+review+your+own+idea", status_code=303)
     if idea.status != STATUS_PENDING:
         return RedirectResponse("/moderation?err=Already+reviewed", status_code=303)
     idea.status = STATUS_PUBLISHED
@@ -165,6 +175,8 @@ def reject_idea(
     idea = db.get(Idea, idea_id)
     if idea is None:
         return RedirectResponse("/moderation?err=Idea+not+found", status_code=303)
+    if _own_content(user, idea.owner_id):
+        return RedirectResponse("/moderation?err=Ask+another+moderator+to+review+your+own+idea", status_code=303)
     idea.status = STATUS_REMOVED
     idea.review_note = note.strip()[:2000]
     idea.updated_at = utc_now()
@@ -186,6 +198,9 @@ def _resolve(
     report = db.get(Report, report_id)
     if report is None:
         return RedirectResponse("/moderation?err=Report+not+found", status_code=303)
+    reported = db.get(Idea, report.idea_id)
+    if reported is not None and _own_content(staff, reported.owner_id):
+        return RedirectResponse("/moderation?err=Ask+another+moderator+to+review+your+own+idea", status_code=303)
     report.status = "actioned" if remove_idea else "dismissed"
     report.resolution_note = note.strip()[:2000]
     report.resolved_by = staff.id

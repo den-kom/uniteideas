@@ -30,11 +30,9 @@ Click **Submit an idea** and fill in something like the pet guard:
 - **Sealed detail** — dimensions, materials, anything you are not ready to publish.
 - **Attachment** — optional sketch (PDF, PNG or JPEG).
 
-Submit. You land on the one-pager. Because this is the account's first idea, it
-is held for review: the proof and timestamp are already recorded, but the idea is
-not public yet. Open **Moderation**, find it under *First submissions awaiting
-review*, and click **Approve and publish**. Every later idea from this account
-goes live immediately.
+Submit. You land on the one-pager and the idea is live straight away, with its proof
+and timestamp. Only an idea that touches a blocked topic is put on hold; a moderator
+finds it under **Moderation > Ideas on hold** and approves or rejects it.
 
 ## 3. Look at the proof
 
