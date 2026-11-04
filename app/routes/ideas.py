@@ -119,16 +119,8 @@ async def submit_idea(
         attachment_hashes=[f[4] for f in stored_files],
     )
 
-    # First-ever submission from an account is held for review; after that the
-    # account is trusted and posts go live immediately.
-    published_before = (
-        db.scalar(
-            select(func.count(Idea.id)).where(
-                Idea.owner_id == user.id, Idea.status == STATUS_PUBLISHED
-            )
-        )
-        or 0
-    )
+    # Ideas go live straight away. The word check holds anything that touches a blocked topic
+    # for a moderator, and AgentBob takes a second look afterwards.
     status = STATUS_PENDING
 
     idea = Idea(
@@ -143,7 +135,7 @@ async def submit_idea(
         status=status,
     )
     db.add(idea)
-    screen = screening.queue_idea(db, idea, extra_text=sealed_detail, trusted=bool(published_before))
+    screen = screening.queue_idea(db, idea, extra_text=sealed_detail)
     status = idea.status
     proof = IdeaProof(
         idea_id=idea_id,
@@ -168,10 +160,8 @@ async def submit_idea(
         note = "Idea+submitted+and+timestamped"
     elif screen.status == "escalated":
         note = "Idea+submitted+and+timestamped.+A+moderator+will+check+it+before+it+goes+live"
-    elif screen.status == "pending":
-        note = "Idea+submitted+and+timestamped.+It+goes+live+once+it+has+been+checked"
     else:
-        note = "Idea+submitted+and+timestamped.+Your+first+post+is+awaiting+a+moderator+review"
+        note = "Idea+submitted+and+timestamped"
     return RedirectResponse(f"/ideas/{idea_id}?msg={note}", status_code=303)
 
 

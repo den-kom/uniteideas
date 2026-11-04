@@ -35,10 +35,10 @@
 </section>
 
 <section>
-  <h2>First submissions awaiting review ({{ pending_ideas|length }})</h2>
+  <h2>Ideas on hold ({{ pending_ideas|length }})</h2>
   <p class="fine">
-    Only an account's first-ever idea lands here. Approving it publishes the idea and
-    trusts the account for everything it posts afterwards.
+    Ideas land here when the word check or AgentBob is unsure. They are hidden until you
+    approve them or reject them. Everything else goes live straight away.
   </p>
   {% for idea in pending_ideas %}
   <div class="card">

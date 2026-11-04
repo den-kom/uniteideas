@@ -63,7 +63,7 @@ FAQ = [
     ),
     (
         "Who can see my sealed detail?",
-        "You and the team members you approve. Moderators can open it only to review a report or a first submission, and each view is recorded in a log they cannot edit.",
+        "You and the team members you approve. Moderators can open it only to review a report or an idea that was put on hold, and each view is recorded in a log they cannot edit.",
     ),
     (
         "How do teams work?",

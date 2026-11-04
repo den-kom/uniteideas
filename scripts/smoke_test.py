@@ -102,21 +102,13 @@ def main() -> None:
         check("one-pager renders", page.status_code == 200)
         check("sealed detail visible to owner", "Injection-moulded TPU" in page.text)
         check(
-            "first submission is held for review",
-            "awaiting a moderator review" in page.text,
+            "a first idea goes live straight away",
+            TestClient(app).get(idea_url).status_code == 200,
         )
         check(
-            "held idea is hidden from the public",
-            TestClient(app).get(idea_url).status_code == 404,
+            "the live idea is in the feed",
+            "Pet guard" in TestClient(app).get("/ideas").text,
         )
-        check(
-            "held idea is absent from the feed",
-            "Pet guard" not in TestClient(app).get("/ideas").text,
-        )
-        published = owner.post(
-            f"/moderation/ideas/{idea_id}/approve", follow_redirects=True
-        )
-        check("moderator approved the first submission", "Idea approved" in published.text)
 
         bundle = owner.get(f"/ideas/{idea_id}/proof-bundle.json").json()
         recomputed = sha256_text(bundle["canonical_payload"])
@@ -367,7 +359,7 @@ def main() -> None:
             follow_redirects=False,
         )
         held_idea_id = held_idea.headers["location"].split("?")[0].rsplit("/", 1)[-1]
-        check("a flagged idea from a trusted account is still held", anon.get(f"/ideas/{held_idea_id}").status_code == 404)
+        check("a flagged idea is held", anon.get(f"/ideas/{held_idea_id}").status_code == 404)
         mq = owner.get("/moderation").text
         check("the held idea shows in the screening queue", "Held by screening (1)" in mq)
         item_id = mq.split("/moderation/screening/")[1].split("/")[0]
@@ -384,14 +376,36 @@ def main() -> None:
             follow_redirects=False,
         )
         waiting_id = waiting.headers["location"].split("?")[0].rsplit("/", 1)[-1]
-        check("in agent mode a clean idea waits for AgentBob", anon.get(f"/ideas/{waiting_id}").status_code == 404)
+        check("in agent mode a clean idea is live while AgentBob has yet to look", anon.get(f"/ideas/{waiting_id}").status_code == 200)
         nxt = anon.get("/api/agent/screen/next", headers=headers).json()["item"]
         check("AgentBob is offered the waiting item", nxt is not None and "Seed library" in nxt["text"])
         check("the screening API needs the token", anon.get("/api/agent/screen/next").status_code == 401)
         check("AgentBob cannot reject", anon.post(f"/api/agent/screen/{nxt['id']}/decide", headers=headers, json={"verdict": "rejected"}).status_code == 409)
         ok = anon.post(f"/api/agent/screen/{nxt['id']}/decide", headers=headers, json={"verdict": "approved", "reason": "clean"})
-        check("AgentBob approves a clean idea", ok.status_code == 200 and anon.get(f"/ideas/{waiting_id}").status_code == 200)
+        check("AgentBob confirms a clean idea", ok.status_code == 200 and anon.get(f"/ideas/{waiting_id}").status_code == 200)
         check("a decided item cannot be decided again", anon.post(f"/api/agent/screen/{nxt['id']}/decide", headers=headers, json={"verdict": "escalated"}).status_code == 409)
+        # AgentBob's second look can pull a live idea back for a moderator
+        second = owner.post(
+            "/submit",
+            data={"title": "Rooftop bee hotels", "summary": "Small hives for solitary bees on city roofs.",
+                  "category": "general", "idea_type": "physical"},
+            follow_redirects=False,
+        )
+        second_id = second.headers["location"].split("?")[0].rsplit("/", 1)[-1]
+        nxt2 = anon.get("/api/agent/screen/next", headers=headers).json()["item"]
+        esc = anon.post(f"/api/agent/screen/{nxt2['id']}/decide", headers=headers, json={"verdict": "escalated", "reason": "unsure"})
+        check("AgentBob escalating a live idea hides it", esc.status_code == 200 and anon.get(f"/ideas/{second_id}").status_code == 404)
+        check("AgentBob cannot approve what it escalated", anon.post(f"/api/agent/screen/{nxt2['id']}/decide", headers=headers, json={"verdict": "approved"}).status_code == 409)
+        check("the escalated idea reaches the moderators", "Rooftop bee hotels" in owner.get("/moderation").text)
+        owner.post(f"/moderation/ideas/{second_id}/approve", follow_redirects=True)
+        check("a moderator can approve it back to live", anon.get(f"/ideas/{second_id}").status_code == 200)
+
+        # AgentBob can flag an idea like a member report; it cannot do anything else
+        flagged = anon.post("/api/agent/flag", headers=headers, json={"idea_id": second_id, "reason": "Looks like an advert"})
+        check("AgentBob can flag an idea", flagged.status_code == 200 and not flagged.json()["duplicate"])
+        check("flagging twice does not pile up reports", anon.post("/api/agent/flag", headers=headers, json={"idea_id": second_id, "reason": "again"}).json()["duplicate"])
+        check("the flag needs the token", anon.post("/api/agent/flag", json={"idea_id": second_id, "reason": "x"}).status_code == 401)
+        check("the flag shows for moderators", "Looks like an advert" in owner.get("/moderation").text)
         os.environ["SCREENING_MODE"] = "rules"
         _gs.cache_clear()
 

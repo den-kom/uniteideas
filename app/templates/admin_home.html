@@ -6,7 +6,7 @@
 <div class="stat-grid">
   <div class="stat"><span class="stat-num">{{ stats.members }}</span><span>members</span></div>
   <div class="stat"><span class="stat-num">{{ stats.ideas }}</span><span>published ideas</span></div>
-  <a class="stat {% if stats.waiting %}stat-alert{% endif %}" href="/moderation"><span class="stat-num">{{ stats.waiting }}</span><span>first posts waiting</span></a>
+  <a class="stat {% if stats.waiting %}stat-alert{% endif %}" href="/moderation"><span class="stat-num">{{ stats.waiting }}</span><span>ideas on hold</span></a>
   <a class="stat {% if stats.reports %}stat-alert{% endif %}" href="/moderation"><span class="stat-num">{{ stats.reports }}</span><span>open reports</span></a>
   <a class="stat" href="/admin/timestamps"><span class="stat-num">{{ stats.ts_pending }}</span><span>timestamps in progress</span></a>
   <a class="stat {% if stats.ts_failed %}stat-alert{% endif %}" href="/admin/timestamps"><span class="stat-num">{{ stats.ts_failed }}</span><span>timestamps failed</span></a>

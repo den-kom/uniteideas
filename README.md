@@ -38,7 +38,7 @@ systemctl --user status uniteideas
 | Proof | SHA-256 of a canonical payload, a receipt, and a public OpenTimestamps timestamp. |
 | Verify | `/verify` looks up an idea by link, id or fingerprint; anyone can check, no account. |
 | Sealing | Sealed text is encrypted at rest; only its fingerprint is published. |
-| Review gate | An account's first idea is held for moderator review; later ones go live at once. |
+| Review | Ideas go live at once. The word check (and AgentBob, afterwards) holds doubtful ones for a moderator. Members and AgentBob can report. |
 | Backers | One backing per signed-in account per idea; click again to take it back. |
 | Teams | Request to join with an hours-per-week pledge; the owner approves. |
 | Roles | user, moderator (review content), admin (accounts, audit log, system), bot (AgentBob). |
