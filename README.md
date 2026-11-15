@@ -56,6 +56,19 @@ also queued for a public timestamp (OpenTimestamps, written into the Bitcoin cha
 `GET /api/agent/ping` with `Authorization: Bearer $AGENT_API_TOKEN`. It confirms the token and
 that AgentBob acts as `user-agentbob`. More endpoints are added when AgentBob gets jobs.
 
+## Settings that connect the site to AgentBob
+
+Two files, two settings. Both files are named `.env`, in different folders on the server:
+
+| File | Line | Value |
+| --- | --- | --- |
+| `/home/usrbob/uniteideas/.env` | `AGENT_API_TOKEN=` | a long random token |
+| `/home/usrbob/agent-bob/.env` | `UNITEIDEAS_AGENT_TOKEN=` | the same token |
+| `/home/usrbob/uniteideas/.env` | `SCREENING_MODE=` | `agent` to let AgentBob review new items, `rules` (default) for the word check only |
+
+`SCREENING_MODE` is optional. If the line is missing the site behaves as `rules`. After editing a
+`.env`, restart that service (`systemctl --user restart uniteideas`).
+
 ## Configuration
 
 All settings live in `.env`; see `.env.example`. `SECRET_KEY` signs session cookies **and**
