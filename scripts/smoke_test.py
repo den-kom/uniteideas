@@ -540,8 +540,193 @@ def main() -> None:
         bot_role = owner.post("/admin/users/user-agentbob/role", data={"role": "admin"}, follow_redirects=True)
         check("robot accounts cannot be edited", "Robot accounts cannot be changed" in bot_role.text)
 
+    check_tier1()
     check_base_url_resolution()
     print(f"\n{len(PASSED)} checks passed")
+
+
+def _reset_rates() -> None:
+    from sqlalchemy import delete
+
+    from app.db import SessionLocal
+    from app.models import RateEvent
+
+    with SessionLocal() as db:
+        db.execute(delete(RateEvent))
+        db.commit()
+
+
+def _login_link(client: TestClient, email: str, name: str = "") -> str:
+    response = client.post("/login", data={"email": email, "display_name": name})
+    match = LINK_RE.search(response.text)
+    return html.unescape(match.group(1)).replace("http://testserver", "") if match else ""
+
+
+def check_tier1() -> None:
+    """Rate limits, posting wait, admin account tools, passwords, tour hooks, staff notices."""
+    from sqlalchemy import select, update
+
+    from app.db import SessionLocal
+    from app.models import AuditLog, Idea, User, utc_now
+    from app.passwords import hash_password, verify_password
+
+    _reset_rates()
+    with TestClient(app) as admin, TestClient(app) as member, TestClient(app) as anon:
+        admin.get(_login_link(admin, "owner@example.com"))
+        check("tier1: admin can sign in", "Admin" in admin.get("/").text)
+
+        # --- 1. sign-in rate limiting
+        _reset_rates()
+        statuses = []
+        for _ in range(6):
+            r = anon.post("/login", data={"email": "limit@example.com"}, follow_redirects=False)
+            statuses.append(r.status_code)
+        check("tier1: repeated sign-in requests for one email are limited", statuses[:5] == [200] * 5 and statuses[5] == 303)
+        again = anon.post("/login", data={"email": "limit@example.com"}, follow_redirects=True)
+        check("tier1: the limit message says how long to wait", "Too many sign-in requests" in again.text and "minutes" in again.text)
+        _reset_rates()
+        for _ in range(21):
+            anon.get("/auth/verify?token=bogus", follow_redirects=False)
+        blocked = anon.get("/auth/verify?token=bogus", follow_redirects=True)
+        check("tier1: guessing sign-in tokens is limited", "Too many attempts" in blocked.text)
+        _reset_rates()
+
+        # --- 5. passwords
+        link = _login_link(member, "pw@example.com", "Pat Word")
+        member.get(link)
+        check("tier1: password page needs sign-in", anon.get("/profile/password", follow_redirects=False).status_code in {303, 401})
+        check("tier1: password page renders", "Set a password" in member.get("/profile/password").text)
+        short = member.post("/profile/password", data={"new_password": "short", "confirm_password": "short"}, follow_redirects=True)
+        check("tier1: short passwords are refused", "at least 10 characters" in short.text)
+        mismatch = member.post("/profile/password", data={"new_password": "a-long-password-1", "confirm_password": "different-long-1"}, follow_redirects=True)
+        check("tier1: mismatched passwords are refused", "do not match" in mismatch.text)
+        saved = member.post("/profile/password", data={"new_password": "a-long-password-1", "confirm_password": "a-long-password-1"}, follow_redirects=True)
+        check("tier1: a password can be set", "Password saved" in saved.text)
+        with SessionLocal() as db:
+            stored = db.scalar(select(User.password_hash).where(User.email == "pw@example.com"))
+        check("tier1: the password is stored hashed, never as typed", stored.startswith("scrypt$") and "a-long-password-1" not in stored)
+        check("tier1: hash verifies only the right password", verify_password("a-long-password-1", stored) and not verify_password("nope-nope-nope", stored))
+        check("tier1: unknown accounts verify false", not verify_password("anything-at-all", None))
+        with TestClient(app) as fresh:
+            ok = fresh.post("/login/password", data={"email": "pw@example.com", "password": "a-long-password-1"}, follow_redirects=False)
+            check("tier1: signing in with the password works", ok.status_code == 303 and "ui_session" in ok.headers.get("set-cookie", ""))
+            fresh.cookies.clear()
+            bad = fresh.post("/login/password", data={"email": "pw@example.com", "password": "wrong-wrong-wrong"}, follow_redirects=True)
+            check("tier1: a wrong password is refused without saying which part was wrong", "Email or password is not right" in bad.text)
+            nouser = fresh.post("/login/password", data={"email": "nobody@example.com", "password": "wrong-wrong-wrong"}, follow_redirects=True)
+            check("tier1: an unknown email gets the same message", "Email or password is not right" in nouser.text)
+            for _ in range(8):
+                fresh.post("/login/password", data={"email": "pw@example.com", "password": "wrong-wrong-wrong"})
+            locked = fresh.post("/login/password", data={"email": "pw@example.com", "password": "a-long-password-1"}, follow_redirects=True)
+            check("tier1: too many wrong passwords locks password sign-in for a while", "Too many wrong passwords" in locked.text)
+        _reset_rates()
+        check("tier1: the emailed link still works for a member with a password", bool(_login_link(anon, "pw@example.com")))
+        _reset_rates()
+        change = member.post("/profile/password", data={"current_password": "bad-bad-bad-bad", "new_password": "another-long-pw-2", "confirm_password": "another-long-pw-2"}, follow_redirects=True)
+        check("tier1: changing a password needs the current one", "current password is not right" in change.text)
+        removed = member.post("/profile/password/remove", data={"current_password": "a-long-password-1"}, follow_redirects=True)
+        check("tier1: a password can be removed", "Password removed" in removed.text)
+
+        # --- 2. posting limit
+        def post(client: TestClient, title: str):
+            return client.post(
+                "/submit",
+                data={"title": title, "summary": "A summary that is long enough to pass.", "public_body": "Body text kept in the draft."},
+                follow_redirects=False,
+            )
+
+        member.post("/onboarding/complete")
+        first = post(member, "First idea of the day")
+        check("tier1: a first idea is accepted straight away", first.status_code == 303 and "/ideas/" in first.headers["location"])
+        second = post(member, "Second idea too soon")
+        check("tier1: a second idea straight after is held back", second.status_code == 429)
+        check("tier1: the wait is shown and the draft kept", "You can post your next idea in about" in second.text and "Second idea too soon" in second.text and "Body text kept in the draft." in second.text)
+        check("tier1: the form page shows the wait too", "You can post your next idea in about" in member.get("/submit").text)
+        with SessionLocal() as db:
+            db.execute(update(Idea).where(Idea.title == "First idea of the day").values(created_at=utc_now().replace(year=utc_now().year) - __import__("datetime").timedelta(minutes=45)))
+            db.execute(update(User).where(User.email == "pw@example.com").values(created_at=utc_now() - __import__("datetime").timedelta(days=30)))
+            db.commit()
+        check("tier1: the wait ends once the time has passed", post(member, "Second idea after waiting").status_code == 303)
+        third = post(member, "Third idea soon after")
+        check("tier1: the wait grows with each idea in a day", third.status_code == 429 and "minutes" in third.text)
+        for n in range(3):
+            check(f"tier1: admins are not held back ({n + 1})", post(admin, f"Admin idea {n}").status_code == 303)
+
+        # --- 3. admin creates accounts
+        check("tier1: members cannot open the create-account page", member.get("/admin/users/new", follow_redirects=False).status_code in {303, 401, 403})
+        check("tier1: admin sees the create-account page", "Create an account" in admin.get("/admin/users/new").text)
+        made = admin.post("/admin/users/new", data={"email": "newbie@example.com", "display_name": "New Bie", "role": "user"})
+        check("tier1: admin creates an account and gets the sign-in link", "Account created" in made.text and "/auth/verify?token=" in made.text)
+        dup = admin.post("/admin/users/new", data={"email": "newbie@example.com"}, follow_redirects=True)
+        check("tier1: duplicate accounts are refused", "already exists" in dup.text)
+        reserved = admin.post("/admin/users/new", data={"email": "agentbob@system.invalid"}, follow_redirects=True)
+        check("tier1: bad or reserved emails are refused", "valid email" in reserved.text or "reserved" in reserved.text)
+        with TestClient(app) as invited:
+            invited_link = html.unescape(LINK_RE.search(made.text).group(1)).replace("http://testserver", "")
+            check("tier1: the invited person signs in with the link", invited.get(invited_link).status_code == 200)
+            with SessionLocal() as db:
+                row = db.scalar(select(User).where(User.email == "newbie@example.com"))
+            check("tier1: terms are accepted at first sign-in", bool(row.terms_version) and row.terms_accepted_at is not None)
+
+        # --- 4. admin delete, bulk suspend and delete
+        for name in ("spam1", "spam2", "spam3"):
+            with TestClient(app) as sp:
+                _reset_rates()
+                sp.get(_login_link(sp, f"{name}@example.com", name))
+                post(sp, f"Buy pills now {name}")
+        with SessionLocal() as db:
+            ids = {u.email: u.id for u in db.scalars(select(User)).all()}
+        check("tier1: admin lists ideas", "Buy pills now spam1" in admin.get("/admin/ideas").text)
+        check("tier1: admin can search ideas by owner email", "Buy pills now spam2" in admin.get("/admin/ideas?q=spam2@example.com").text)
+        sus = admin.post("/admin/users/bulk", data={"action": "suspend", "ids": [ids["spam1@example.com"], ids["spam2@example.com"]], "reason": "spam"}, follow_redirects=True)
+        check("tier1: bulk suspend works", "2 account(s) suspended" in sus.text)
+        nores = admin.post("/admin/users/bulk", data={"action": "suspend", "ids": [ids["spam3@example.com"]]}, follow_redirects=True)
+        check("tier1: bulk suspend needs a reason", "Give a reason" in nores.text)
+        with TestClient(app) as sp:
+            _reset_rates()
+            check("tier1: suspended members cannot sign in", "suspended" in sp.get(_login_link(sp, "spam1@example.com"), follow_redirects=True).text)
+        protect = admin.post("/admin/users/bulk", data={"action": "delete", "ids": [ids["owner@example.com"]]}, follow_redirects=True)
+        check("tier1: admins and yourself cannot be bulk-deleted", "protected" in protect.text)
+        ask = admin.post("/admin/users/bulk", data={"action": "delete", "ids": [ids["spam1@example.com"], ids["spam2@example.com"], ids["spam3@example.com"]]})
+        check("tier1: deleting asks for confirmation first", "Type DELETE" in ask.text and "spam3@example.com" in ask.text)
+        with SessionLocal() as db:
+            check("tier1: nothing is deleted before confirming", db.scalar(select(User).where(User.email == "spam3@example.com")) is not None)
+        wrong = admin.post("/admin/users/bulk", data={"action": "delete", "confirm": "delete", "ids": [ids["spam3@example.com"]]})
+        check("tier1: a wrong confirmation does not delete", "Type DELETE" in wrong.text)
+        gone = admin.post("/admin/users/bulk", data={"action": "delete", "confirm": "DELETE", "ids": [ids["spam1@example.com"], ids["spam2@example.com"], ids["spam3@example.com"]]}, follow_redirects=True)
+        check("tier1: bulk delete removes accounts and their ideas", "3 account(s) and 3 idea(s) deleted" in gone.text)
+        with SessionLocal() as db:
+            check("tier1: the accounts and ideas are really gone", db.scalar(select(User).where(User.email == "spam1@example.com")) is None and db.scalar(select(Idea).where(Idea.title.like("Buy pills%"))) is None)
+            check("tier1: deletions are in the audit log", db.scalar(select(AuditLog).where(AuditLog.action == "user.delete")) is not None)
+        victim = admin.get("/admin/ideas?q=Second idea").text
+        idea_id = re.search(r'name="ids" value="(idea[^"]+)"', victim).group(1)
+        askidea = admin.post("/admin/ideas/bulk", data={"ids": [idea_id]})
+        check("tier1: deleting an idea asks for confirmation", "Type DELETE" in askidea.text)
+        done = admin.post("/admin/ideas/bulk", data={"ids": [idea_id], "confirm": "DELETE"}, follow_redirects=True)
+        check("tier1: an idea can be deleted on its own", "1 idea(s) deleted" in done.text)
+        check("tier1: members cannot use bulk delete", member.post("/admin/users/bulk", data={"action": "delete", "confirm": "DELETE", "ids": [ids["pw@example.com"]]}, follow_redirects=False).status_code in {303, 401, 403})
+
+        # --- 6. tour hooks
+        page = member.get("/onboarding").text
+        check("tier1: the tour has a start button and script", 'id="tour-start"' in page and "/static/tour.js" in page)
+        check("tier1: the real nav buttons carry tour markers", all(f'data-tour="{k}"' in page for k in ("submit", "ideas", "verify", "profile", "theme", "finish")))
+        check("tier1: the tour script is served", member.get("/static/tour.js").status_code == 200)
+
+        # --- 7. staff notices
+        outbox = Path(os.environ["OUTBOX_DIR"])
+        for f in outbox.glob("*"):
+            f.unlink()
+        _reset_rates()
+        with TestClient(app) as sp:
+            sp.get(_login_link(sp, "bad@example.com", "Bad Actor"))
+            sp.post("/submit", data={"title": "Selling counterfeit passports", "summary": "Fake passports and counterfeit documents for sale.", "public_body": "counterfeit"})
+        sent = [f.read_text() for f in outbox.glob("*owner_at_example.com*")]
+        check("tier1: staff are emailed when something is held", any("waiting for review" in t for t in sent), str(len(sent)))
+        count_before = len(list(outbox.glob("*owner_at_example.com*")))
+        with TestClient(app) as sp2:
+            sp2.get(_login_link(sp2, "bad2@example.com", "Bad Two"))
+            sp2.post("/submit", data={"title": "More counterfeit passports", "summary": "Fake passports and counterfeit documents for sale.", "public_body": "counterfeit"})
+        check("tier1: a second notice of the same kind is throttled", len(list(outbox.glob("*owner_at_example.com*"))) == count_before)
 
 
 def check_base_url_resolution() -> None:

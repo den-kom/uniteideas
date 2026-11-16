@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Create account - UniteIdeas admin{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Create an account</h1><a href="/admin/users">Members</a></div>
+<p class="lede">The person gets a one-time sign-in link by email. They accept the terms the first time they sign in.</p>
+<form method="post" action="/admin/users/new" class="stack form narrow">
+  <label>Email
+    <input type="email" name="email" required placeholder="name@example.com" />
+  </label>
+  <label>Display name
+    <input type="text" name="display_name" maxlength="80" placeholder="Leave blank to use the part before the @" />
+  </label>
+  <label>Role
+    <select name="role">
+      {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn">Create account and send link</button>
+</form>
+{% endblock %}

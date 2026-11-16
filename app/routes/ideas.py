@@ -23,7 +23,7 @@ from app.models import (
     utc_now,
 )
 from app.proof import build_receipt, sign_receipt, compute_content_hash, sha256_bytes, sha256_text
-from app import audit, screening, timestamping
+from app import audit, postlimit, screening, timestamping
 from app.permissions import can
 from app.sealing import seal, unseal
 from app.verification import canonical_for
@@ -45,11 +45,17 @@ SUGGESTED_CATEGORIES = [
 
 
 @router.get("/submit")
-def submit_form(request: Request, user: User = Depends(require_user)):
+def submit_form(request: Request, db: Session = Depends(get_db), user: User = Depends(require_user)):
+    wait = postlimit.wait_seconds(db, user)
     return render(
         request,
         "submit.html",
-        {"categories": SUGGESTED_CATEGORIES},
+        {
+            "categories": SUGGESTED_CATEGORIES,
+            "draft": {},
+            "wait": wait,
+            "wait_text": postlimit.describe(wait) if wait else "",
+        },
         user=user,
     )
 
@@ -70,6 +76,28 @@ async def submit_idea(
     settings = get_settings()
     title = title.strip()
     summary = summary.strip()
+    wait = postlimit.wait_seconds(db, user)
+    if wait:
+        # Keep what they typed so a long write-up is not lost. Attachments must be chosen again.
+        return render(
+            request,
+            "submit.html",
+            {
+                "categories": SUGGESTED_CATEGORIES,
+                "draft": {
+                    "title": title,
+                    "summary": summary,
+                    "category": category,
+                    "idea_type": idea_type,
+                    "public_body": public_body,
+                    "sealed_detail": sealed_detail,
+                },
+                "wait": wait,
+                "wait_text": postlimit.describe(wait),
+            },
+            user=user,
+            status_code=429,
+        )
     if len(title) < 3:
         return RedirectResponse("/submit?err=Title+is+too+short", status_code=303)
     if len(summary) < 10:

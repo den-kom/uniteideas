@@ -8,25 +8,32 @@
   write-up sealed if you want to stay patentable or simply cautious.
 </p>
 
+{% if wait %}
+<p class="flash bad" role="status">
+  You can post your next idea in about {{ wait_text }}. This gap grows when you post several ideas in a day,
+  which keeps the feed readable for everyone. {% if draft %}Your text is kept below.{% endif %}
+</p>
+{% endif %}
+
 <form method="post" action="/submit" enctype="multipart/form-data" class="stack form">
   <label>Title
-    <input type="text" name="title" required maxlength="200" placeholder="Pet guard for office chair wheels" />
+    <input type="text" name="title" required maxlength="200" value="{{ draft.title or '' }}" placeholder="Pet guard for office chair wheels" />
   </label>
 
   <label>One-line summary (public)
     <input type="text" name="summary" required maxlength="300"
-           placeholder="A clip-on guard that stops pets' tails getting caught in chair castors." />
+           value="{{ draft.summary or '' }}" placeholder="A clip-on guard that stops pets' tails getting caught in chair castors." />
   </label>
 
   <div class="two-up">
     <label>Type
       <select name="idea_type">
-        <option value="digital">Digital (app, tool, site)</option>
-        <option value="physical">Physical product</option>
+        <option value="digital"{% if draft.idea_type == "digital" %} selected{% endif %}>Digital (app, tool, site)</option>
+        <option value="physical"{% if draft.idea_type == "physical" %} selected{% endif %}>Physical product</option>
       </select>
     </label>
     <label>Category
-      <input type="text" name="category" list="cats" placeholder="pets" />
+      <input type="text" name="category" list="cats" value="{{ draft.category or '' }}" placeholder="pets" />
       <datalist id="cats">
         {% for c in categories %}<option value="{{ c }}"></option>{% endfor %}
       </datalist>
@@ -35,12 +42,12 @@
 
   <label>Public one-pager
     <textarea name="public_body" rows="8"
-              placeholder="The problem, who it helps, and roughly how it works. This is public."></textarea>
+              placeholder="The problem, who it helps, and roughly how it works. This is public.">{{ draft.public_body or '' }}</textarea>
   </label>
 
   <label>Sealed detail (kept private)
     <textarea name="sealed_detail" rows="8"
-              placeholder="Dimensions, materials, algorithms, go-to-market — anything you are not ready to publish."></textarea>
+              placeholder="Dimensions, materials, algorithms, go-to-market — anything you are not ready to publish.">{{ draft.sealed_detail or '' }}</textarea>
   </label>
   <p class="fine">
     Sealed text is encrypted at rest. Only its fingerprint is published, which is
@@ -51,7 +58,7 @@
     <input type="file" name="attachment" accept="application/pdf,image/png,image/jpeg" />
   </label>
 
-  <button class="btn">Submit and timestamp</button>
+  <button class="btn" data-tour="submit-button">Submit and timestamp</button>
 </form>
 
 <p class="fine">

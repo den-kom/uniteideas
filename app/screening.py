@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app import audit
 from app.config import get_settings
+from app import notices
 from app.models import (
     STATUS_PENDING,
     STATUS_PUBLISHED,
@@ -75,6 +76,7 @@ def queue_idea(db: Session, idea: Idea, extra_text: str = "") -> ScreenItem:
     # else: stays pending as a to-do for AgentBob's second look; the idea is live meanwhile
     if verdict == "escalated":
         idea.status = STATUS_PENDING
+        notices.notify_staff(db, "held", f'"{idea.title}" was held: {reason}')
     else:
         idea.status = STATUS_PUBLISHED
         idea.published_at = utc_now()
@@ -94,6 +96,8 @@ def queue_skill(db: Session, user: User, text: str) -> ScreenItem:
         _decide(db, item, "approved", "", "rules")
     if row is not None:
         row.status = "pending" if verdict == "escalated" else "approved"
+    if verdict == "escalated":
+        notices.notify_staff(db, "skill", f'Custom skill "{text[:80]}" was held: {reason}')
     return item
 
 
@@ -122,6 +126,7 @@ def apply(db: Session, item: ScreenItem, status: str, reason: str, actor: User, 
             elif status == "escalated" and idea.status == STATUS_PUBLISHED:
                 idea.status = STATUS_PENDING  # hidden until a moderator looks
                 idea.updated_at = utc_now()
+                notices.notify_staff(db, "held", f'"{idea.title}" was hidden after a second look: {reason[:200]}')
             elif status == "rejected" and idea.status in (STATUS_PENDING, STATUS_PUBLISHED):
                 idea.status = STATUS_REMOVED
                 idea.review_note = reason[:2000] or "Not allowed on UniteIdeas."

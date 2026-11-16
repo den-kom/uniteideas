@@ -2,7 +2,7 @@
 {% block title %}Members - UniteIdeas admin{% endblock %}
 {% block content %}
 
-<div class="page-head"><h1>Members</h1><a href="/admin">Admin home</a></div>
+<div class="page-head"><h1>Members</h1><span><a class="btn small" href="/admin/users/new">Create account</a> <a href="/admin">Admin home</a></span></div>
 
 <form class="filters" method="get" action="/admin/users">
   <label>Search
@@ -19,12 +19,24 @@
 <p class="fine">{{ total }} account{{ '' if total == 1 else 's' }}. The first real sign-up on a new database becomes admin.
   Moderators can review content but cannot see this page.</p>
 
+<form method="post" action="/admin/users/bulk" id="user-bulk" class="filters">
+  <strong>With the ticked members:</strong>
+  <label>Reason (needed to suspend)
+    <input type="text" name="reason" class="reason" placeholder="e.g. spam" />
+  </label>
+  <button class="btn small danger" name="action" value="suspend">Suspend</button>
+  <button class="btn small ghost" name="action" value="reactivate">Reactivate</button>
+  <button class="btn small danger" name="action" value="delete">Delete...</button>
+</form>
+<p class="fine">Admins, robots and your own account have no tick box. Deleting asks you to confirm first.</p>
+
 <div class="table-wrap">
 <table class="table">
-  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+  <thead><tr><th><input type="checkbox" aria-label="Select all on this page" data-select-all="user-bulk" /></th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
   <tbody>
   {% for u in users %}
   <tr>
+    <td>{% if not u.is_bot and u.id != user.id and u.role != 'admin' %}<input type="checkbox" name="ids" value="{{ u.id }}" form="user-bulk" aria-label="Select {{ u.display_name }}" />{% endif %}</td>
     <td><a href="/u/{{ u.id }}">{{ u.display_name }}</a></td>
     <td class="fine">{{ '—' if u.is_bot else u.email }}</td>
     <td>{{ u.role }}</td>
@@ -51,6 +63,11 @@
         <button class="btn small ghost">Reactivate</button>
         {% endif %}
       </form>
+      <form method="post" action="/admin/users/bulk" class="inline">
+        <input type="hidden" name="action" value="delete" />
+        <input type="hidden" name="ids" value="{{ u.id }}" />
+        <button class="btn small ghost danger">Delete</button>
+      </form>
       {% endif %}
       {% endif %}
     </td>
@@ -68,4 +85,11 @@
 </p>
 {% endif %}
 
+<script>
+document.querySelectorAll('[data-select-all]').forEach(function (box) {
+  box.addEventListener('change', function () {
+    document.querySelectorAll('input[name="ids"][form="' + box.dataset.selectAll + '"]').forEach(function (c) { c.checked = box.checked; });
+  });
+});
+</script>
 {% endblock %}

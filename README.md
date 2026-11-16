@@ -69,6 +69,19 @@ Two files, two settings. Both files are named `.env`, in different folders on th
 `SCREENING_MODE` is optional. If the line is missing the site behaves as `rules`. After editing a
 `.env`, restart that service (`systemctl --user restart uniteideas`).
 
+## Accounts, limits and passwords
+
+- **Sign-in limits** (built in, no setting): 5 link requests per email and 10 per address per 15 minutes;
+  6 wrong passwords per email and 20 per address per 15 minutes. Behind a proxy, set
+  `TRUST_PROXY_HEADERS=true` in `.env` so the visitor address is used.
+- **Idea posting wait**: 1 idea free, then a growing gap (10 min, 30 min, 2 h, 6 h, 24 h) for ideas
+  posted within 24 hours; accounts under 3 days old wait twice as long. Admins are exempt. The ladder
+  is in `app/postlimit.py`.
+- **Passwords** are optional (`/profile/password`), hashed with scrypt. Emailed links always work.
+- **Admin tools**: `/admin/users/new` creates accounts, `/admin/users` has ticks for bulk suspend,
+  reactivate and delete, `/admin/ideas` lists ideas for deletion. Deleting asks you to type DELETE.
+- **Tour**: `/onboarding` highlights the real buttons (`static/tour.js`).
+
 ## Configuration
 
 All settings live in `.env`; see `.env.example`. `SECRET_KEY` signs session cookies **and**

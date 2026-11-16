@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app import screening
-from app import audit
+from app import audit, notices
 from app.models import Idea, Report, ScreenItem, User
 from app.system_users import AGENTBOB_ID
 
@@ -110,5 +110,6 @@ def flag_idea(
     report = Report(idea_id=idea.id, reporter_id=bot.id, reason=reason)
     db.add(report)
     audit.record(db, bot, "agent.flag", "idea", idea.id, reason[:200])
+    notices.notify_staff(db, "report", f'AgentBob flagged "{idea.title}": {reason[:200]}')
     db.commit()
     return {"ok": True, "report_id": report.id, "duplicate": False}

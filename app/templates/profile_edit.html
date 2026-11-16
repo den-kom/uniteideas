@@ -69,6 +69,8 @@
   </div>
 </form>
 
+<p class="fine">Sign-in: <a href="/profile/password">{{ "change or remove your password" if user.password_hash else "set a password (optional)" }}</a></p>
+
 
 <script>
 (function () {

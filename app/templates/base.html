@@ -37,19 +37,19 @@
   <nav class="nav">
     {% set path = request.url.path %}
     {% if user %}
-      <a href="/submit"{% if path == '/submit' %} class="active" aria-current="page"{% endif %}>Submit</a>
+      <a href="/submit" data-tour="submit"{% if path == '/submit' %} class="active" aria-current="page"{% endif %}>Submit</a>
     {% else %}
       <a href="/login"{% if path == '/login' %} class="active" aria-current="page"{% endif %}>Join</a>
     {% endif %}
-    <a href="/ideas"{% if path == '/ideas' or path.startswith('/ideas/') %} class="active" aria-current="page"{% endif %}>Ideas</a>
-    <a href="/verify"{% if path == '/verify' %} class="active" aria-current="page"{% endif %}>Verify</a>
+    <a href="/ideas" data-tour="ideas"{% if path == '/ideas' or path.startswith('/ideas/') %} class="active" aria-current="page"{% endif %}>Ideas</a>
+    <a href="/verify" data-tour="verify"{% if path == '/verify' %} class="active" aria-current="page"{% endif %}>Verify</a>
     {% if user %}
-      <a href="/profile"{% if path.startswith('/profile') %} class="active" aria-current="page"{% endif %}>{{ user.display_name }}</a>
+      <a href="/profile" data-tour="profile"{% if path.startswith('/profile') %} class="active" aria-current="page"{% endif %}>{{ user.display_name }}</a>
       {% if user.is_staff %}<a href="/moderation"{% if path.startswith('/moderation') %} class="active" aria-current="page"{% endif %}>Moderation</a>{% endif %}
       {% if user.is_admin %}<a href="/admin"{% if path.startswith('/admin') %} class="active" aria-current="page"{% endif %}>Admin</a>{% endif %}
       <form method="post" action="/logout" class="inline"><button class="link">Sign out</button></form>
     {% endif %}
-    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light theme" title="Theme">
+    <button type="button" class="theme-toggle" id="theme-toggle" data-tour="theme" aria-label="Switch to light theme" title="Theme">
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
         <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
