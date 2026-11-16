@@ -19,7 +19,7 @@ from app.models import (
     User,
     utc_now,
 )
-from app import audit, screening
+from app import audit, notices, screening
 from app.permissions import require_permission
 from app.sealing import unseal
 from app.security import require_user
@@ -43,6 +43,7 @@ def report_idea(
     db.add(
         Report(idea_id=idea_id, reporter_id=user.id, reason=reason.strip()[:2000])
     )
+    notices.notify_staff(db, "report", f"A member reported idea {idea_id}: {reason.strip()[:200]}")
     db.commit()
     return RedirectResponse(
         f"/ideas/{idea_id}?msg=Reported+to+moderators", status_code=303

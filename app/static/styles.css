@@ -563,3 +563,13 @@ select {
 }
 select:hover { border-color: var(--accent); }
 select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Interactive tour (onboarding) */
+.tour-blocker { position: fixed; inset: 0; z-index: 900; background: transparent; }
+.tour-spot { position: fixed; z-index: 901; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .62), 0 0 0 3px var(--accent); transition: all .2s ease; }
+.tour-card { position: fixed; z-index: 902; background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
+.tour-card h2 { margin: 2px 0 6px; font-size: 1.1rem; }
+.tour-card .row { margin: 12px 0 0; }
+@media (prefers-reduced-motion: reduce) { .tour-spot { transition: none; } }

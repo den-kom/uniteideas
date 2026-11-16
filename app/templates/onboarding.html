@@ -8,6 +8,12 @@
   platform is built to remove that fear, so ideas get built instead of forgotten.
 </p>
 
+<p class="row" id="tour-start-row" hidden>
+  <button type="button" class="btn" id="tour-start">Show me around</button>
+  <span class="fine">A quick walk through the buttons at the top of this page. Nothing leaves the page.</span>
+</p>
+
+<h2>The short version</h2>
 <ol class="tour">
   <li>
     <h2>Submit a one-pager</h2>
@@ -65,9 +71,10 @@
   </li>
 </ol>
 
-<form method="post" action="/onboarding/complete" class="inline">
+<form method="post" action="/onboarding/complete" class="inline" data-tour="finish">
   <button class="btn">Got it — don't show this again</button>
 </form>
 <a class="btn ghost" href="/">Skip for now</a>
 
+<script src="/static/tour.js?v={{ asset_v }}" defer></script>
 {% endblock %}

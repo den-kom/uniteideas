@@ -80,6 +80,8 @@ class User(Base):
     profile_done: Mapped[bool] = mapped_column(Boolean, default=False)
     terms_version: Mapped[str] = mapped_column(String(40), default="")
     terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Optional password (scrypt hash). Magic-link sign-in always works too.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     ideas: Mapped[list["Idea"]] = relationship(back_populates="owner")
     skills: Mapped[list["UserSkill"]] = relationship(
@@ -317,6 +319,17 @@ class ScreenItem(Base):
     reason: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class RateEvent(Base):
+    """One counted attempt (a sign-in request, a failed password...). Old rows are swept away."""
+
+    __tablename__ = "rate_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    bucket: Mapped[str] = mapped_column(String(40), index=True)
+    key: Mapped[str] = mapped_column(String(320), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, index=True)
 
 
 class PocBuild(Base):

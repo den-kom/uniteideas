@@ -57,6 +57,9 @@ class Settings:
     screening_mode: str
     dev_show_magic_link: bool
     magic_link_ttl_minutes: int
+    trust_proxy_headers: bool
+    staff_notices: bool
+    staff_notice_cooldown_minutes: int
     max_pledge_hours_per_week: int
     soft_pledge_hours_per_week: int
     contact_email: str
@@ -83,6 +86,9 @@ def get_settings() -> Settings:
         screening_mode="agent" if os.getenv("SCREENING_MODE", "rules").strip().lower() == "agent" else "rules",
         dev_show_magic_link=_flag("DEV_SHOW_MAGIC_LINK", "true"),
         magic_link_ttl_minutes=int(os.getenv("MAGIC_LINK_TTL_MINUTES", "30")),
+        trust_proxy_headers=_flag("TRUST_PROXY_HEADERS", "false"),
+        staff_notices=_flag("STAFF_NOTICES", "true"),
+        staff_notice_cooldown_minutes=int(os.getenv("STAFF_NOTICE_COOLDOWN_MINUTES", "30")),
         max_pledge_hours_per_week=int(os.getenv("MAX_PLEDGE_HOURS_PER_WEEK", "40")),
         soft_pledge_hours_per_week=int(os.getenv("SOFT_PLEDGE_HOURS_PER_WEEK", "20")),
         contact_email=os.getenv("CONTACT_EMAIL", "contact@uniteideas.org"),

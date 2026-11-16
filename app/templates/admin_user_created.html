@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Account created - UniteIdeas admin{% endblock %}
+{% block content %}
+<h1>Account created</h1>
+<p class="lede">{{ member.display_name }} ({{ member.email }}) was added as {{ member.role }}. A sign-in link was sent to them.</p>
+{% if dev_link %}
+<p class="fine">Development mode: no real email is sent, so here is the link to hand over yourself.</p>
+<p><a href="{{ dev_link }}">{{ dev_link }}</a></p>
+{% endif %}
+<p class="row">
+  <a class="btn small" href="/admin/users/new">Create another</a>
+  <a class="btn small ghost" href="/admin/users">Back to members</a>
+</p>
+{% endblock %}

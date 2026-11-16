@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Please confirm - UniteIdeas admin{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+<p class="lede">{{ explain }}</p>
+<ul class="plain">
+  {% for item in items %}<li>{{ item }}</li>{% endfor %}
+</ul>
+{% if skipped %}<p class="fine">{{ skipped }} protected account(s) were left out (admins, robots and you cannot be deleted or suspended here).</p>{% endif %}
+<form method="post" action="{{ action_url }}" class="stack form narrow">
+  {% for name, value in fields %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
+  <label>Type DELETE to confirm
+    <input type="text" name="confirm" autocomplete="off" required pattern="DELETE" />
+  </label>
+  <div class="row">
+    <button class="btn danger">Delete permanently</button>
+    <a href="{{ back_url }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
