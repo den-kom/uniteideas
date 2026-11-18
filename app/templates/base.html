@@ -39,7 +39,8 @@
     {% if user %}
       <a href="/submit" data-tour="submit"{% if path == '/submit' %} class="active" aria-current="page"{% endif %}>Submit</a>
     {% else %}
-      <a href="/login"{% if path == '/login' %} class="active" aria-current="page"{% endif %}>Join</a>
+      <a href="/login">Join</a>
+      <a href="/login"{% if path == '/login' %} class="active" aria-current="page"{% endif %}>Login</a>
     {% endif %}
     <a href="/ideas" data-tour="ideas"{% if path == '/ideas' or path.startswith('/ideas/') %} class="active" aria-current="page"{% endif %}>Ideas</a>
     <a href="/verify" data-tour="verify"{% if path == '/verify' %} class="active" aria-current="page"{% endif %}>Verify</a>
@@ -80,7 +81,7 @@
 
 <footer class="footer">
   <p>
-    UniteIdeas is a community: share ideas safely, prove when you shared them, and build them with others.
+    UniteIdeas is a community where you can share ideas, secure them in real time and build them with others.
   </p>
   <p class="fine">
     Proof receipts are evidence that content existed at a given time. They are not patents and not legal advice.

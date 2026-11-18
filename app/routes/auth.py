@@ -40,8 +40,11 @@ def login_request(
     request: Request,
     email: str = Form(...),
     display_name: str = Form(default=""),
+    password: str = Form(default=""),
     db: Session = Depends(get_db),
 ):
+    if password:  # one button: a password means "log in with it", blank means "email me a link"
+        return login_password(request, email=email, password=password, db=db)
     settings = get_settings()
     clean_email = email.strip().lower()
     if "@" not in clean_email or len(clean_email) < 5:
