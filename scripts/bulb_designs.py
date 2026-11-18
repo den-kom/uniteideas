@@ -59,11 +59,16 @@ def glow_filter(fid: str, std: float) -> str:
     )
 
 
-def halo(uid: str, b: float, r: float = 74, cy: float = 54) -> str:
+def tone_down(b: float) -> float:
+    """Highly rated ideas (levels 6-10) glow 20% less than the original design; lower levels are unchanged."""
+    return 0.8 if b >= 0.5 else 1.0
+
+
+def halo(uid: str, b: float, r: float = 74, cy: float = 54, k: float = 1.0) -> str:
     c = glow_colour(min(1.0, b + 0.15))
     return (
         f'<defs><radialGradient id="{uid}h" cx="50%" cy="50%" r="50%">'
-        f'<stop offset="0" stop-color="{c}" stop-opacity="{0.05 + 0.5 * b:.2f}"/>'
+        f'<stop offset="0" stop-color="{c}" stop-opacity="{(0.05 + 0.5 * b) * k:.2f}"/>'
         f'<stop offset="1" stop-color="{c}" stop-opacity="0"/></radialGradient></defs>'
         f'<circle cx="60" cy="{cy}" r="{r}" fill="url(#{uid}h)"/>'
     )
@@ -268,8 +273,8 @@ def d6b(b: float, theme: str = "dark", aura: bool | None = None, aura_r: float =
     # Two thin wires rise from the base, bend out to each end of the coil, and a short cross-wire holds the stem.
     wires = "M52 112 V90 L38 63 M68 112 V90 L82 63"
     return wrap(
-        (halo(u + "o", 0.55, r=aura_r, cy=70) if aura else "")
-        + halo(u, b * 0.7, r=84 if b > 0.4 else 70)
+        (halo(u + "o", 0.55, r=aura_r, cy=70, k=tone_down(b)) if aura else "")
+        + halo(u, b * 0.7, r=84 if b > 0.4 else 70, k=tone_down(b))
         + f'<defs><radialGradient id="{u}in" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="{core}" stop-opacity="{0.04 + 0.34 * b:.2f}"/>'
         + f'<stop offset="1" stop-color="{col}" stop-opacity="{0.02 + 0.12 * b:.2f}"/></radialGradient>' + glow_filter(u + "g", 1.6 + 3.4 * b) + "</defs>"
         + f'<path d="{BULB}" fill="url(#{u}in)"/>'
@@ -306,13 +311,13 @@ def d6b_light(b: float, aura: bool | None = None, aura_r: float = 150) -> str:
     wire = "#7a7a7a"
     bars = f'<path d="M43.5 120 H76.5"/><path d="M43.5 129 H76.5"/><path d="M43.5 138 H76.5"/><path d="M50 147 H70"/>'
     outer = (
-        f'<radialGradient id="{u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity=".22"/>'
+        f'<radialGradient id="{u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity="{0.22 * tone_down(b):.2f}"/>'
         '<stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>'
         f'<circle cx="60" cy="70" r="{aura_r}" fill="url(#{u}o)"/>'
         if aura else ""
     )
     return wrap(
-        f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity="{0.2 * b:.2f}"/>'
+        f'<defs><radialGradient id="{u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe14d" stop-opacity="{0.2 * b * tone_down(b):.2f}"/>'
         + '<stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>'
         + f'<radialGradient id="{u}f" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#ffe45c" stop-opacity="{0.1 + 0.9 * b:.2f}"/>'
         + f'<stop offset="1" stop-color="{fill}" stop-opacity="{0.05 + 0.85 * b:.2f}"/></radialGradient>'

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Sign in - UniteIdeas{% endblock %}
+{% block title %}Login - UniteIdeas{% endblock %}
 {% block content %}
 
-<h1>Sign in</h1>
+<h1>Login</h1>
 <p class="lede">
-  We email you a one-time link that signs you in and expires in
-  {{ settings.magic_link_ttl_minutes }} minutes. If you have set a password, you can use that instead.
+  Enter your email and password to log in. No password, or forgot it? Leave it blank and we email you a
+  one-time link that expires in {{ settings.magic_link_ttl_minutes }} minutes.
 </p>
 
 <form method="post" action="/login" class="stack form narrow">
@@ -15,13 +15,10 @@
   <label>Display name (new accounts only)
     <input type="text" name="display_name" maxlength="80" placeholder="How you want to be credited" />
   </label>
-  <label>Password <span class="fine">(only if you have set one)</span>
+  <label>Password <span class="fine">(leave blank to get an emailed link)</span>
     <input type="password" name="password" autocomplete="current-password" maxlength="200" />
   </label>
-  <div class="row">
-    <button class="btn">Email me a sign-in link</button>
-    <button class="btn ghost" formaction="/login/password" formnovalidate>Sign in with password</button>
-  </div>
+  <button class="btn">Login</button>
   <p class="fine">
     By continuing you agree to the <a href="/terms">terms of use</a> and
     <a href="/community-rules">community rules</a>, and confirm you are 18 or older.
