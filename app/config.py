@@ -58,6 +58,7 @@ class Settings:
     dev_show_magic_link: bool
     magic_link_ttl_minutes: int
     trust_proxy_headers: bool
+    signup_mode: str
     staff_notices: bool
     staff_notice_cooldown_minutes: int
     max_pledge_hours_per_week: int
@@ -87,6 +88,7 @@ def get_settings() -> Settings:
         dev_show_magic_link=_flag("DEV_SHOW_MAGIC_LINK", "true"),
         magic_link_ttl_minutes=int(os.getenv("MAGIC_LINK_TTL_MINUTES", "30")),
         trust_proxy_headers=_flag("TRUST_PROXY_HEADERS", "false"),
+        signup_mode="invite" if os.getenv("SIGNUP_MODE", "open").strip().lower() == "invite" else "open",
         staff_notices=_flag("STAFF_NOTICES", "true"),
         staff_notice_cooldown_minutes=int(os.getenv("STAFF_NOTICE_COOLDOWN_MINUTES", "30")),
         max_pledge_hours_per_week=int(os.getenv("MAX_PLEDGE_HOURS_PER_WEEK", "40")),

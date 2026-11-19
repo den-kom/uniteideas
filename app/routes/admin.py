@@ -20,6 +20,7 @@ from app.models import (
     AuditLog,
     Idea,
     IdeaProof,
+    InviteRequest,
     Report,
     User,
 )
@@ -262,6 +263,19 @@ def new_user_create(
         role = ROLE_USER
     if db.scalar(select(User).where(User.email == clean)) is not None:
         return RedirectResponse("/admin/users/new?err=An+account+with+that+email+already+exists", status_code=303)
+    member, link = _create_and_invite(db, request, admin, clean, display_name, role)
+    return render(
+        request,
+        "admin_user_created.html",
+        {
+            "member": member,
+            "dev_link": link if get_settings().dev_show_magic_link else None,
+        },
+        user=admin,
+    )
+
+
+def _create_and_invite(db: Session, request: Request, admin: User, clean: str, display_name: str, role: str):
     name = (display_name.strip() or clean.split("@")[0])[:80]
     member = User(email=clean, display_name=name, role=role)
     db.add(member)
@@ -272,19 +286,66 @@ def new_user_create(
     mailer.send(
         clean,
         "Your UniteIdeas account is ready",
-        f"An account has been created for you on UniteIdeas. Sign in with this one-time link "
+        f"An account has been created for you on UniteIdeas. Log in with this one-time link "
         f"(valid {get_settings().magic_link_ttl_minutes} minutes):\n\n{link}\n\n"
         "After that you can set a password if you like, or ask for a new link any time.",
     )
+    return member, link
+
+
+# ---- Requests to join ------------------------------------------------------------------------
+
+
+@router.get("/requests")
+def requests_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("users.manage")),
+):
+    rows = db.scalars(
+        select(InviteRequest).order_by(InviteRequest.status.asc(), desc(InviteRequest.created_at)).limit(200)
+    ).all()
+    return render(request, "admin_requests.html", {"rows": rows}, user=user)
+
+
+@router.post("/requests/{req_id}/invite")
+def request_invite(
+    req_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("users.manage")),
+):
+    row = db.get(InviteRequest, req_id)
+    if row is None or row.status != "new":
+        return RedirectResponse("/admin/requests?err=That+request+was+already+handled", status_code=303)
+    if db.scalar(select(User).where(User.email == row.email)) is not None:
+        row.status = "invited"
+        db.commit()
+        return RedirectResponse("/admin/requests?msg=They+already+have+an+account", status_code=303)
+    member, link = _create_and_invite(db, request, admin, row.email, row.name, ROLE_USER)
+    row.status = "invited"
+    audit.record(db, admin, "invite.approve", "user", member.id, row.email)
+    db.commit()
     return render(
         request,
         "admin_user_created.html",
-        {
-            "member": member,
-            "dev_link": link if get_settings().dev_show_magic_link else None,
-        },
+        {"member": member, "dev_link": link if get_settings().dev_show_magic_link else None},
         user=admin,
     )
+
+
+@router.post("/requests/{req_id}/dismiss")
+def request_dismiss(
+    req_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("users.manage")),
+):
+    row = db.get(InviteRequest, req_id)
+    if row is not None and row.status == "new":
+        row.status = "dismissed"
+        audit.record(db, admin, "invite.dismiss", "invite_request", str(row.id), row.email)
+        db.commit()
+    return RedirectResponse("/admin/requests?msg=Dismissed", status_code=303)
 
 
 # ---- Bulk and single account actions ---------------------------------------------------------
