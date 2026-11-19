@@ -332,6 +332,19 @@ class RateEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, index=True)
 
 
+class InviteRequest(Base):
+    """Someone asked to join. Staff review these and send an invite (an account plus sign-in link)."""
+
+    __tablename__ = "invite_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    name: Mapped[str] = mapped_column(String(80), default="")
+    about: Mapped[str] = mapped_column(String(1000), default="")
+    status: Mapped[str] = mapped_column(String(20), default="new", index=True)  # new | invited | dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
 class PocBuild(Base):
     """LEGACY: the old proof-of-concept build queue. Nothing creates or reads these any more.
 

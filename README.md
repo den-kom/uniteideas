@@ -80,6 +80,7 @@ Two files, two settings. Both files are named `.env`, in different folders on th
 - **Passwords** are optional (`/profile/password`), hashed with scrypt. Emailed links always work.
 - **Admin tools**: `/admin/users/new` creates accounts, `/admin/users` has ticks for bulk suspend,
   reactivate and delete, `/admin/ideas` lists ideas for deletion. Deleting asks you to type DELETE.
+- **Requests to join**: `/request-invite` is the public form; staff see requests at `/admin/requests` and can invite with one click. `SIGNUP_MODE=invite` in `/home/usrbob/uniteideas/.env` (or the server's `.env`) turns off open sign-up so only invited people can log in.
 - **Tour**: `/onboarding` highlights the real buttons (`static/tour.js`).
 
 ## Configuration

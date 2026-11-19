@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Ask to join - UniteIdeas{% endblock %}
+{% block content %}
+<h1>Ask to join</h1>
+<p class="lede">UniteIdeas is opening gradually. Tell us a little about yourself and we will email you when there is a place.</p>
+
+<form method="post" action="/request-invite" class="stack form narrow">
+  <label>Email
+    <input type="email" name="email" required autocomplete="email" placeholder="you@example.com" />
+  </label>
+  <label>Name
+    <input type="text" name="name" maxlength="80" autocomplete="name" placeholder="How you want to be addressed" />
+  </label>
+  <label>What would you like to do here? <span class="fine">(optional)</span>
+    <textarea name="about" rows="4" maxlength="1000" placeholder="An idea you want to share, skills you could offer, or how you heard about us"></textarea>
+  </label>
+  <div aria-hidden="true" style="position:absolute;left:-9999px"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label></div>
+  <button class="btn">Send request</button>
+  <p class="fine">We only use your email to reply to this request. See the <a href="/privacy">privacy policy</a>.</p>
+</form>
+<p class="fine">Already have an account? <a href="/login">Login</a>.</p>
+{% endblock %}

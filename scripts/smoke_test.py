@@ -712,6 +712,37 @@ def check_tier1() -> None:
         check("tier1: an idea can be deleted on its own", "1 idea(s) deleted" in done.text)
         check("tier1: members cannot use bulk delete", member.post("/admin/users/bulk", data={"action": "delete", "confirm": "DELETE", "ids": [ids["pw@example.com"]]}, follow_redirects=False).status_code in {303, 401, 403})
 
+        # --- requests to join
+        _reset_rates()
+        check("tier2: the request-to-join form renders", "Ask to join" in anon.get("/request-invite").text)
+        got = anon.post("/request-invite", data={"email": "friend@example.com", "name": "Fran", "about": "I have an idea"})
+        check("tier2: a request is accepted", "we have your request" in got.text)
+        anon.post("/request-invite", data={"email": "friend@example.com", "name": "Fran"})
+        bot = anon.post("/request-invite", data={"email": "botty@example.com", "website": "http://spam"})
+        check("tier2: bots that fill the hidden field get no record", "we have your request" in bot.text)
+        page = admin.get("/admin/requests").text
+        check("tier2: admin sees the request once, not the bot", page.count("friend@example.com") == 1 and "botty@example.com" not in page)
+        check("tier2: members cannot see requests", member.get("/admin/requests", follow_redirects=False).status_code in {303, 401, 403})
+        with SessionLocal() as db:
+            from app.models import InviteRequest
+            rid = db.scalar(select(InviteRequest.id).where(InviteRequest.email == "friend@example.com"))
+        invited_resp = admin.post(f"/admin/requests/{rid}/invite")
+        check("tier2: inviting creates the account and shows the link", "Account created" in invited_resp.text and "/auth/verify?token=" in invited_resp.text)
+        check("tier2: an invited request cannot be invited twice", "already handled" in admin.post(f"/admin/requests/{rid}/invite", follow_redirects=True).text)
+        for _ in range(6):
+            anon.post("/request-invite", data={"email": "x@example.com"})
+        check("tier2: the request form is rate limited", "Too many requests" in anon.post("/request-invite", data={"email": "y@example.com"}, follow_redirects=True).text)
+        _reset_rates()
+        from app import config as _config
+        _config.get_settings.cache_clear()
+        os.environ["SIGNUP_MODE"] = "invite"
+        with TestClient(app) as inv:
+            check("tier2: invite mode refuses unknown emails", "Ask to join" in inv.post("/login", data={"email": "stranger@example.com"}, follow_redirects=True).text)
+            check("tier2: invite mode still lets known emails in", "/auth/verify?token=" in inv.post("/login", data={"email": "friend@example.com"}).text)
+        os.environ["SIGNUP_MODE"] = "open"
+        _config.get_settings.cache_clear()
+        _reset_rates()
+
         # --- 6. tour hooks
         page = member.get("/onboarding").text
         check("tier1: the tour has a start button and script", 'id="tour-start"' in page and "/static/tour.js" in page)

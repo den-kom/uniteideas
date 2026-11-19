@@ -39,7 +39,7 @@
     {% if user %}
       <a href="/submit" data-tour="submit"{% if path == '/submit' %} class="active" aria-current="page"{% endif %}>Submit</a>
     {% else %}
-      <a href="/login">Join</a>
+      <a href="{{ '/request-invite' if settings.signup_mode == 'invite' else '/login' }}">Join</a>
       <a href="/login"{% if path == '/login' %} class="active" aria-current="page"{% endif %}>Login</a>
     {% endif %}
     <a href="/ideas" data-tour="ideas"{% if path == '/ideas' or path.startswith('/ideas/') %} class="active" aria-current="page"{% endif %}>Ideas</a>

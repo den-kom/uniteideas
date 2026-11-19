@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Requests to join - UniteIdeas admin{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Requests to join</h1><span><a class="btn small ghost" href="/admin/users/new">Create account</a> <a href="/admin">Admin home</a></span></div>
+<p class="fine">"Invite" creates the account and emails a login link. People find the form at /request-invite.</p>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>When</th><th>Who</th><th>About</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td class="fine">{{ r.created_at.strftime('%d %b %Y %H:%M') }}</td>
+    <td>{{ r.name or '-' }}<br><span class="fine">{{ r.email }}</span></td>
+    <td>{{ r.about }}</td>
+    <td>{{ r.status }}</td>
+    <td>
+      {% if r.status == 'new' %}
+      <form method="post" action="/admin/requests/{{ r.id }}/invite" class="inline"><button class="btn small">Invite</button></form>
+      <form method="post" action="/admin/requests/{{ r.id }}/dismiss" class="inline"><button class="btn small ghost">Dismiss</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="fine">No requests yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

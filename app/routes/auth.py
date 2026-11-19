@@ -9,11 +9,11 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app import audit, mailer, ratelimit
+from app import audit, mailer, notices, ratelimit
 from app.passwords import hash_password, problem_with, verify_password
 from app.config import LEGAL_VERSION, base_url_for, get_settings
 from app.db import get_db
-from app.models import ROLE_ADMIN, ROLE_BOT, ROLE_USER, User, utc_now
+from app.models import ROLE_ADMIN, ROLE_BOT, ROLE_USER, InviteRequest, User, utc_now
 from app.system_users import is_system_email
 from app.security import (
     SESSION_COOKIE,
@@ -53,6 +53,10 @@ def login_request(
     if is_system_email(clean_email):
         return RedirectResponse("/login?err=That+address+cannot+sign+in", status_code=303)
 
+    if settings.signup_mode == "invite" and db.scalar(select(User.id).where(User.email == clean_email)) is None:
+        return RedirectResponse(
+            "/login?err=No+account+for+that+email+yet.+Use+%22Ask+to+join%22+and+we+will+invite+you", status_code=303
+        )
     ip = ratelimit.client_ip(request)
     wait = max(
         ratelimit.retry_after(db, "login_ip", ip),
@@ -234,6 +238,48 @@ def password_remove(
     user.password_hash = None
     db.commit()
     return RedirectResponse("/profile/password?msg=Password+removed.+Sign+in+with+emailed+links", status_code=303)
+
+
+@router.get("/request-invite")
+def invite_form(request: Request, user: User | None = Depends(current_user)):
+    return render(request, "request_invite.html", {}, user=user)
+
+
+@router.post("/request-invite")
+def invite_submit(
+    request: Request,
+    email: str = Form(...),
+    name: str = Form(default=""),
+    about: str = Form(default=""),
+    website: str = Form(default=""),  # hidden field: people leave it empty, simple bots fill it in
+    db: Session = Depends(get_db),
+    user: User | None = Depends(current_user),
+):
+    clean = email.strip().lower()
+    if website.strip():
+        return render(request, "request_invite_done.html", {}, user=user)
+    if "@" not in clean or len(clean) < 5 or is_system_email(clean):
+        return RedirectResponse("/request-invite?err=Enter+a+valid+email+address", status_code=303)
+    ip = ratelimit.client_ip(request)
+    wait = ratelimit.retry_after(db, "invite_ip", ip)
+    if wait:
+        return RedirectResponse(
+            f"/request-invite?err=Too+many+requests.+Try+again+in+{quote(ratelimit.human_wait(wait))}", status_code=303
+        )
+    ratelimit.record(db, "invite_ip", ip)
+    already = db.scalar(select(InviteRequest).where(InviteRequest.email == clean, InviteRequest.status == "new"))
+    if already is None:
+        db.add(InviteRequest(email=clean, name=name.strip()[:80], about=about.strip()[:1000]))
+        notices.notify_staff(db, "interest", f"{name.strip()[:80] or clean} <{clean}> asked to join.")
+        mailer.send(
+            get_settings().contact_email,
+            "New request to join UniteIdeas",
+            f"Name: {name.strip()[:80]}\nEmail: {clean}\n\nAbout them:\n{about.strip()[:1000]}\n\n"
+            f"Review: {base_url_for(request)}/admin/requests",
+        )
+    db.commit()
+    # Same answer whether or not the address was already known, so this page cannot be used to probe accounts.
+    return render(request, "request_invite_done.html", {}, user=user)
 
 
 @router.post("/logout")

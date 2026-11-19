@@ -29,6 +29,7 @@ KINDS = {
     "held": "An idea is waiting for review",
     "report": "An idea has been reported",
     "skill": "A custom skill is waiting for review",
+    "interest": "Someone asked to join UniteIdeas",
 }
 
 
@@ -52,10 +53,11 @@ def notify_staff(db: Session, kind: str, detail: str) -> int:
     staff = db.scalars(
         select(User).where(User.role.in_((ROLE_MODERATOR, ROLE_ADMIN)), User.is_active.is_(True))
     ).all()
+    queue = "/admin/requests" if kind == "interest" else "/moderation"
     body = (
         f"{KINDS[kind]}.\n\n{detail[:300]}\n\n"
         f"Right now: {waiting} idea(s) held, {open_reports} open report(s).\n"
-        f"Review queue: {settings.public_base_url.rstrip('/')}/moderation\n\n"
+        f"Review queue: {settings.public_base_url.rstrip('/')}{queue}\n\n"
         f"You get at most one email of this kind every {settings.staff_notice_cooldown_minutes} minutes."
     )
     for person in staff:

@@ -21,6 +21,7 @@ LIMITS: dict[str, tuple[int, int]] = {
     "login_email": (5, 15 * 60),  # sign-in link requests for one email
     "verify_ip": (20, 15 * 60),  # bad or repeated link/password attempts per address
     "password_fail": (6, 15 * 60),  # wrong passwords per email
+    "invite_ip": (5, 60 * 60),  # "ask for an invite" submissions per address
     "password_fail_ip": (20, 15 * 60),  # wrong passwords per address
 }
 
